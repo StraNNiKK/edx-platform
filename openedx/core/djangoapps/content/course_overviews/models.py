@@ -8,6 +8,7 @@ from django.db import models, transaction
 from django.db.models.fields import BooleanField, DateTimeField, DecimalField, TextField, FloatField, IntegerField
 from django.db.utils import IntegrityError
 from django.template import defaultfilters
+from django.utils import timezone
 from django.utils.translation import ugettext
 from lms.djangoapps import django_comment_client
 from model_utils.models import TimeStampedModel
@@ -264,6 +265,39 @@ class CourseOverview(TimeStampedModel):
         except cls.DoesNotExist:
             course_overview = None
         return course_overview or cls.load_from_module_store(course_id)
+
+    def get_course_status(self, cert_status):
+        """Return the status for a course by checking its certificates status.
+
+        Check if the course is active, completed or the certificate is
+        processing.
+
+        Args:
+            cert_status (Dict): Certificate status for course enrollment
+
+        Returns:
+            Course status with value 'active', 'processing', 'completed' or
+            'inactive'.
+        """
+        from certificates.models import CertificateStatuses  # pylint: disable=import-error
+
+        now = timezone.now()
+        valid_certificate_statuses = [
+            CertificateStatuses.generating,
+            CertificateStatuses.downloadable,
+            CertificateStatuses.notpassing,
+            CertificateStatuses.restricted,
+        ]
+        if self.end is None or self.end > now:
+            return "active"
+        elif self.end < now and cert_status.get('status') == 'processing':
+            return "processing"
+        elif self.end is not None and self.end < now and cert_status.get('status') != 'processing':
+            return "completed"
+        elif self.may_certify() and cert_status.get('status') in valid_certificate_statuses:
+            return "completed"
+
+        return "inactive"
 
     def clean_id(self, padding_char='='):
         """

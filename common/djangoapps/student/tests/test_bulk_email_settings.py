@@ -51,24 +51,26 @@ class TestStudentDashboardEmailView(ModuleStoreTestCase):
 
     @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': False})
     def test_email_flag_true(self):
-        # Assert that the URL for the email view is in the response
+        # # Assert that the show email settings is false.
         response = self.client.get(self.url)
-        self.assertTrue(self.email_modal_link in response.content)
+        self.assertContains(response, '"show_email_settings": true', 1)
+        self.assertContains(response, '"is_course_blocked": false', 1)
 
     @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': False})
     def test_email_flag_false(self):
-        # Assert that the URL for the email view is not in the response
+        # Assert that the show email settings is false.
         response = self.client.get(self.url)
-        self.assertFalse(self.email_modal_link in response.content)
+        self.assertContains(response, '"show_email_settings": false', 1)
+        self.assertContains(response, '"is_course_blocked": false', 1)
 
     @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': True})
     def test_email_unauthorized(self):
         # Assert that instructor email is not enabled for this course
         self.assertFalse(CourseAuthorization.instructor_email_enabled(self.course.id))
-        # Assert that the URL for the email view is not in the response
+        # Assert that the show email settings is false
         # if this course isn't authorized
         response = self.client.get(self.url)
-        self.assertFalse(self.email_modal_link in response.content)
+        self.assertContains(response, '"show_email_settings": false', 1)
 
     @patch.dict(settings.FEATURES, {'ENABLE_INSTRUCTOR_EMAIL': True, 'REQUIRE_COURSE_EMAIL_AUTH': True})
     def test_email_authorized(self):
@@ -77,10 +79,11 @@ class TestStudentDashboardEmailView(ModuleStoreTestCase):
         cauth.save()
         # Assert that instructor email is enabled for this course
         self.assertTrue(CourseAuthorization.instructor_email_enabled(self.course.id))
-        # Assert that the URL for the email view is not in the response
+        # Assert that the show email settings is false
         # if this course isn't authorized
         response = self.client.get(self.url)
-        self.assertTrue(self.email_modal_link in response.content)
+        self.assertContains(response, '"show_email_settings": true', 1)
+        self.assertContains(response, '"is_course_blocked": false', 1)
 
 
 @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')

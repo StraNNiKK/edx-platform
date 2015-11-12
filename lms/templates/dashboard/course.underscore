@@ -1,0 +1,688 @@
+<div>
+    <div class="course-container">
+        <% if (!!model.course_program_info && model.course_program_info.category === 'xseries') { %>
+        <div class="label-xseries-association">
+            <i class="xseries-icon"></i>
+
+            <p class="message-copy"><%= _.sprintf(gettext("%(category)s Program Course"), { category : model.course_program_info.display_category }) %></p>
+        </div>
+        <% } %>
+        <article class="course<%- model.course_display_mode %>">
+            <section class="details">
+                <div class="wrapper-course-image" aria-hidden="true">
+                    <% if (model.show_courseware_link) {
+                        var courseCoverImageText = _.sprintf('%(courseNumber)s %(courseName)s Cover Image', { courseNumber: model.course_number, courseName: model.course_name});
+                        if (!model.is_course_blocked) { %>
+                        <a href="<%- model.course_info_url %>" data-course-key="<%- model.course_key %>" class="cover">
+                            <img src="<%- model.course_image_url %>" class="course-image" alt="<%= _.sprintf('%(courseNumber)s %(courseName)s Home Page', { courseNumber: model.course_number, courseName: model.course_name}) %>"/>
+                        </a>
+                        <% } else { %>
+                        <a class="fade-cover">
+                            <img src="<%- model.course_image_url %>" class="course-image"
+                                 alt="<%- courseCoverImageText %>"/>
+                        </a>
+                        <% }
+                    } else { %>
+                    <a class="cover">
+                        <img src="<%- model.course_image_url %>" class="course-image"
+                             alt="<%- courseCoverImageText %>"/>
+                    </a>
+                    <% } %>
+                    <% if (settings.enable_verified_certificates) { %>
+                    <span class="sts-enrollment" title="<%- model.course_verified_certs.enrollment_title %>">
+                          <span class="label"><%- gettext("Enrolled as: ") %></span>
+                        <% if (model.course_verified_certs.show_image){ %>
+                        <img class="deco-graphic" src="/static/images/verified-ribbon.png"
+                             alt="<%- model.course_verified_certs.image_alt %>"/>
+                        <% } %>
+                        <div class="sts-enrollment-value"><%- model.course_verified_certs.enrollment_value %></div>
+                        </span>
+                    <% } %>
+                </div>
+                <div class="wrapper-course-details">
+                    <h3 class="course-title">
+                        <% if (model.show_courseware_link) {
+                             if (!model.is_course_blocked) { %>
+                                <a data-course-key="<%- model.course_key %>"
+                                   href="<%- model.course_info_url %>"><%- model.course_name %></a>
+                            <% } else { %>
+                                <a class="disable-look" data-course-key="<%- model.course_key %>"><%- model.course_name %></a>
+                            <% }
+                            } else { %>
+                        <span><%- model.course_name %></span>
+                        <% } %>
+                    </h3>
+
+                    <div class="course-info">
+                        <span class="info-university"><%- model.course_university_about_section %> - </span>
+                        <span class="info-course-id"><%- model.course_number %></span>
+                        <span class="info-date-block" data-tooltip="Hi">
+                        <% if (model.has_course_ended) { %>
+                            <%= _.sprintf(gettext("Ended - %(endDate)s"), { endDate:model.short_end_date}) %>
+                        <% } else if (model.has_course_started) { %>
+                            <%= _.sprintf(gettext("Started - %(startDate)s"), { startDate:model.short_start_date}) %>
+                        <% } else if (model.start_date_is_still_default) { %>
+                            <%- gettext("Coming Soon") %>
+                        <% } else if (model.starts_within_5_days) { %>
+                            <%= _.sprintf(gettext("Starts - %(dayAndTime)s"), { dayAndTime:model.day_and_time}) %>
+                        <% } else { %>
+                            <%= _.sprintf(gettext("Starts - %(startDate)s"), { startDate:model.short_start_date}) %>
+                        <% } %>
+                        </span>
+                    </div>
+                    <div class="wrapper-course-actions">
+                        <div class="course-actions">
+                            <% if (model.show_courseware_link) {
+                                if (model.has_course_ended) {
+                                    if (!model.is_course_blocked) { %>
+                                        <a href="<%- model.course_info_url %>" class="enter-course archived"
+                                           data-course-key="<%- model.course_key %>"><%- gettext('View Archived Course') %><span
+                                                class="sr">&nbsp;<%- model.course_name %></span></a>
+                                    <% } else { %>
+                                        <a class="enter-course-blocked archived"
+                                           data-course-key="<%- model.course_key %>"><%- gettext('View Archived Course') %><span
+                                                class="sr">&nbsp;<%- model.course_name %></span></a>
+                                    <% }
+                                } else {
+                                    if (!model.is_course_blocked) { %>
+                                        <a href="<%- model.course_info_url %>" class="enter-course"
+                                           data-course-key="<%- model.course_key %>"><%- gettext('View Course') %><span class="sr">&nbsp;<%- model.course_name %></span></a>
+                                    <% } else { %>
+                                        <a class="enter-course-blocked"
+                                           data-course-key="<%- model.course_key %>"><%- gettext('View Course') %><span class="sr">&nbsp;<%- model.course_name %></span></a>
+                                    <% }
+                                }
+
+                                if (settings.share_settings) {
+                                    if (model.share_url && settings.share_settings.DASHBOARD_FACEBOOK) {
+                                        var facebook_url = _.sprintf('https://www.facebook.com/sharer/sharer.php?u=%(shareUrl)s', {shareUrl: model.share_url}); %>
+                                        <a
+                                            data-tooltip="<%- gettext('Share on Facebook') %>"
+                                            class="action action-facebook"
+                                            aria-haspopup="true"
+                                            aria-expanded="false"
+                                            href="<%- facebook_url %>"
+                                            target="_blank"
+                                            title="<%- gettext('Share on Facebook') %>"
+                                            onclick="window.open('<%- facebook_url %>', 'shareWindow', 'toolbar=no, location=no, status=no, menubar=no, scrollbars=yes, resizable=yes, width=640, height=480'); return false;">
+                                        <span class="sr"><%- gettext('Facebook') %></span>
+                                        <i class="fa fa-facebook" aria-hidden="true"></i>
+                                </a>
+                                    <% }
+                                    if (model.share_url && settings.share_settings.DASHBOARD_TWITTER) {
+                                        var share_text_default = _.sprintf(gettext("I'm learning on %(platformName)s:"), {platformName:settings.platform_name});
+                                        var share_text = settings.share_settings.DASHBOARD_TWITTER_TEXT ? settings.share_settings.DASHBOARD_TWITTER_TEXT : share_text_default;
+                                        var twitter_url = _.sprintf('https://twitter.com/intent/tweet?text=%(shareText)s%%20%(shareUrl)s', {shareText: encodeURIComponent(share_text), shareUrl: model.share_url}); %>
+                                        <a
+                                            data-tooltip="<%- gettext('Share on Twitter') %>"
+                                            class="action action-twitter"
+                                            aria-haspopup="true"
+                                            aria-expanded="false"
+                                            href="<%- twitter_url %>"
+                                            target="_blank"
+                                            title="<%- gettext('Share on Twitter') %>"
+                                            onclick="window.open('<%- twitter_url %>', 'shareWindow', 'toolbar=no, location=no, status=no, menubar=no, scrollbars=yes, resizable=yes, width=640, height=480'); return false;">
+                                        <span class="sr"><%- gettext('Twitter') %></span>
+                                        <i class="fa fa-twitter" aria-hidden="true"></i>
+                                </a>
+                                    <% }
+                                }
+                            } %>
+                            <div class="wrapper-action-more" data-course-key="<%- model.course_key %>">
+                                <a href="#actions-dropdown" class="action action-more"
+                                   id="actions-dropdown-link" aria-haspopup="true"
+                                   aria-expanded="false" data-course-number="<%- model.course_number %>"
+                                   data-course-name="<%- model.course_name %>">
+                                    <span class="sr"><%- gettext('Course options dropdown') %></span>
+                                    <i class="fa fa-cog" aria-hidden="true"></i>
+                                </a>
+
+                                <div class="actions-dropdown" id="actions-dropdown"
+                                     aria-label="<%- gettext('Additional Actions Menu') %>">
+                                    <ul class="actions-dropdown-list" id="actions-dropdown-list"
+                                        aria-label="<%- gettext('Available Actions') %>" role="menu">
+                                        <% if (model.can_unenroll) { %>
+                                        <li class="actions-item" id="actions-item-unenroll">
+                                            <% if (model.is_paid_course && model.show_refund_option){
+                                                if (!model.is_course_blocked){ %>
+                                                    <a href="#unenroll-modal" class="action action-unenroll"
+                                                       rel="leanModal" data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the purchased course %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('You will be refunded the amount you paid.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a class="action action-unenroll is-disabled"
+                                                       data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the purchased course %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('You will be refunded the amount you paid.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% }
+                                            } else if (model.is_paid_course && !model.show_refund_option) {
+                                                if (!model.is_course_blocked){ %>
+                                                    <a href="#unenroll-modal" class="action action-unenroll"
+                                                       rel="leanModal" data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the purchased course %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('You will not be refunded the amount you paid.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a class="action action-unenroll is-disabled"
+                                                       data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the purchased course %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('You will not be refunded the amount you paid.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% }
+                                            } else if (model.course_mode !== "verified") {
+                                                if (!model.is_course_blocked) { %>
+                                                    <a href="#unenroll-modal" class="action action-unenroll"
+                                                       rel="leanModal" data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from %(course_name)s (%(course_number)s)?') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a class="action action-unenroll is-disabled"
+                                                       data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from %(course_name)s (%(course_number)s)?') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% }
+                                            } else if (model.show_refund_option) {
+                                                if (!model.is_course_blocked){ %>
+                                                    <a href="#unenroll-modal" class="action action-unenroll"
+                                                       rel="leanModal" data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-cert-name-long="<%- settings.cert_name_long %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the verified %(cert_name_long)s track of %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('You will be refunded the amount you paid.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a class="action action-unenroll is-disabled"
+                                                       data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-cert-name-long="<%- settings.cert_name_long %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the verified %(cert_name_long)s track of %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('You will be refunded the amount you paid.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% }
+                                            } else {
+                                                if (!model.is_course_blocked) { %>
+                                                    <a href="#unenroll-modal" class="action action-unenroll"
+                                                       rel="leanModal" data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-cert-name-long="<%- settings.cert_name_long %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the verified %(cert_name_long)s track of %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('The refund deadline for this course has passed, so you will not receive a refund.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% } else { %>
+                                                    <a class="action action-unenroll is-disabled"
+                                                       data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-course-name="<%- model.course_name %>"
+                                                       data-cert-name-long="<%- settings.cert_name_long %>"
+                                                       data-track-info="<%- gettext('Are you sure you want to unenroll from the verified %(cert_name_long)s track of %(course_name)s (%(course_number)s)?') %>"
+                                                       data-refund-info="<%- gettext('The refund deadline for this course has passed, so you will not receive a refund.') %>">
+                                                        <%- gettext('Unenroll') %>
+                                                    </a>
+                                                <% }
+                                            } %>
+                                        </li>
+                                        <% } %>
+                                        <li class="actions-item"
+                                            id="actions-item-email-settings">
+                                            <% if (model.show_email_settings) {
+                                                if (!model.is_course_blocked) { %>
+                                                    <a href="#email-settings-modal" class="action action-email-settings"
+                                                       rel="leanModal" data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-optout="<%- model.optout %>"><%- gettext('Email Settings') %></a>
+                                                <% } else { %>
+                                                    <a class="action action-email-settings is-disabled"
+                                                       data-course-id="<%- model.course_key %>"
+                                                       data-course-number="<%- model.course_number %>"
+                                                       data-optout="<%- model.optout %>"><%- gettext('Email Settings') %></a>
+                                                <% }
+                                            } %>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <footer class="wrapper-messages-primary">
+                <ul class="messages-list">
+                    <% if (model.may_certify && model.cert_status) {
+                        if (model.cert_status.status === 'generating') {
+                            status_css_class = 'course-status-certrendering';
+                        } else if (model.cert_status.status === 'ready') {
+                            status_css_class = 'course-status-certavailable';
+                        } else if (model.cert_status.status === 'notpassing') {
+                            status_css_class = 'course-status-certnotavailable';
+                        } else {
+                            status_css_class = 'course-status-processing';
+                        }
+                    %>
+                        <li class="message message-status <%- status_css_class %> is-shown">
+
+                            <% if (model.cert_status.status === 'processing'){ %>
+                                <p class="message-copy"><%- gettext("Final course details are being wrapped up at this time. Your final standing will be available shortly.") %></p>
+                            <% } else if ($.inArray(model.cert_status.status, ['generating', 'ready', 'notpassing', 'restricted'])) { %>
+                                <p class="message-copy"><%- gettext("Your final grade:")%>
+                                <span class="grade-value"><%= _.sprintf("%.0f", model.cert_status.grade * 100) %></span>.
+                                <% if (model.cert_status.status === 'notpassing'){ %>
+                                    <% if (model.course_mode !== 'audit'){ %>
+                                        <%= _.sprintf(gettext("Grade required for a %(cert_name_short)s:"), {cert_name_short:settings.cert_name_short}) %> <span class="grade-value">
+                                    <% } else { %>
+                                        <%- gettext("Grade required to pass this course:")%> <span class="grade-value">
+                                    <% } %>
+                                    <%= _.sprintf("%.0f", model.course_overview.lowest_passing_grade * 100) %>
+                                    </span>.
+                                <% } else if (model.cert_status.status === 'restricted' && model.course_mode === 'verified'){ %>
+                                    <p class="message-copy">
+                                        <%= _.sprintf(gettext("Your verified %(cert_name_long)s is being held pending confirmation that the issuance of your %(cert_name_short)s is in compliance with strict U.S. embargoes on Iran, Cuba, Syria and Sudan. If you think our system has mistakenly identified you as being connected with one of those countries, please let us know by contacting %(email)s. If you would like a refund on your %(cert_name_long)s, please contact our billing address %(billing_email)s"),
+                                        {
+                                            email: _.sprintf('<a class="contact-link" href="mailto:%(email)s">%(email)s</a>.', {email:settings.contact_email}),
+                                            billing_email: _.sprintf('<a class="contact-link" href="mailto:%(email)s">%(email)s</a>',{email:settings.billing_email}),
+                                            cert_name_short:settings.cert_name_short,
+                                            cert_name_long:settings.cert_name_long
+                                        }) %>
+                                    </p>
+
+                                <% } else if (model.cert_status.status === 'restricted') { %>
+                                    <p class="message-copy">
+                                        <%= _.sprintf(gettext("Your %(cert_name_long)s is being held pending confirmation that the issuance of your %(cert_name_short)s is in compliance with strict U.S. embargoes on Iran, Cuba, Syria and Sudan. If you think our system has mistakenly identified you as being connected with one of those countries, please let us know by contacting %(email)s."),
+                                        {
+                                            email: _.sprintf('<a class="contact-link" href="mailto:%(email)s">%(email)s</a>.', {email:settings.contact_email}),
+                                            cert_name_short:settings.cert_name_short,
+                                            cert_name_long:settings.cert_name_long
+                                        }) %>
+                                    </p>
+                                <% } %>
+                                </p>
+                            <% } %>
+
+                            <% if (model.cert_status.show_disabled_download_button || model.cert_status.show_download_url || model.cert_status.show_survey_button){ %>
+                                <div class="wrapper-message-primary">
+                                    <ul class="actions actions-primary">
+                                        <% if (model.cert_status.show_disabled_download_button){ %>
+                                            <li class="action"><span class="disabled">
+                                                <%= _.sprintf("Your %(cert_name_short)s is Generating", {cert_name_short:settings.cert_name_short}) %></span></li>
+                                        <% } else if (model.cert_status.show_download_url && model.cert_status.show_cert_web_view){ %>
+                                            <li class="action action-certificate">
+                                                <a class="btn" href="<%- model.cert_status.cert_web_view_url %>" target="_blank"
+                                                   title="<%- gettext('This link will open the certificate web view') %>">
+                                                    <%= _.sprintf(gettext("View %(cert_name_short)s"), {cert_name_short:settings.cert_name_short}) %></a></li>
+                                        <% } else if (model.cert_status.show_download_url && $.inArray(model.course_mode, ["honor", "audit", "no-id-professional"])) { %>
+                                            <li class="action action-certificate">
+                                                <a class="btn" href="<%- model.cert_status.download_url %>"
+                                                   title="<%- gettext('This link will open/download a PDF document') %>">
+                                                    <%= _.sprintf(gettext("Download %(cert_name_short)s (PDF)"), {cert_name_short:settings.cert_name_short}) %></a></li>
+                                        <% } else if (model.cert_status.show_download_url && model.course_mode === 'verified' && model.cert_status.mode === 'honor'){ %>
+                                            <li class="action">
+                                                <a class="btn" href="<%- model.cert_status.download_url %>"
+                                                   title="<%- gettext('This link will open/download a PDF document') %>">
+                                                    <%= _.sprintf(gettext("Download Your %(cert_name_short)s (PDF)"), {cert_name_short:settings.cert_name_short}) %></a>
+                                            </li>
+                                        <% } else if (model.cert_status.show_download_url && $.inArray(model.course_mode, ["verified", "professional"])) { %>
+                                            <li class="action">
+                                                <a class="btn" href="<%- model.cert_status.download_url %>"
+                                                   title="<%= _.sprintf(gettext('This link will open/download a PDF document of your verified %(cert_name_long)s.'), {cert_name_long:settings.cert_name_long}) %>">
+                                                    <%= _.sprintf(gettext("Download Your ID Verified %(cert_name_short)s (PDF)"), {cert_name_short:settings.cert_name_short}) %></a>
+                                            </li>
+                                        <% }
+
+                                        if (model.cert_status.show_survey_button) { %>
+                                            <li class="action"><a class="cta" href="<%- model.cert_status.survey_url %>">
+                                                <%- gettext("Complete our course feedback survey") %></a></li>
+                                        <% } %>
+                                    </ul>
+                                </div>
+
+                                <% if (model.cert_status.show_download_url && model.cert_status.linked_in_url){ %>
+                                    <ul class="actions actions-secondary">
+                                        <li class="action action-share">
+                                            <a class="action-linkedin-profile" target="_blank" href="<%- model.cert_status.linked_in_url %>"
+                                               title="<%- gettext('Add Certificate to LinkedIn Profile') %>"
+                                               data-course-id="<%- model.course_key %>"
+                                               data-certificate-mode="<%- model.cert_status.mode %>"
+                                            >
+                                                <img class="action-linkedin-profile-img"
+                                                     src="images/linkedin_add_to_profile.png"
+                                                     alt="<%- gettext('Share on LinkedIn') %>">
+                                            </a>
+                                        </li>
+                                    </ul>
+                                <% } %>
+
+                                <% if (model.cert_status.show_download_url && model.course_mode === 'verified' && model.cert_status.mode === 'honor'){ %>
+                                    <div class="certificate-explanation">
+                                        <%= _.sprintf(gettext('Since we did not have a valid set of verification photos from you when your %(cert_name_long)s was generated, we could not grant you a verified %(cert_name_short)s. An honor code %(cert_name_short)s has been granted instead.'), {cert_name_short:settings.cert_name_short, cert_name_long:settings.cert_name_long}) %>
+                                    </div>
+                                <% } %>
+                            <% } %>
+                        </li>
+                    <% }
+                    if (model.credit_status != null){
+                        if (model.credit_status.provider_name){
+                            var provider_link = _.sprintf('<a href="%(creditStatus)s" target="_blank">%(providerName)s</a>', {creditStatus: model.credit_status.provider_status_url, providerName:model.credit_status.provider_name });
+                        }
+                        if (model.credit_status.eligible){ %>
+                            <li class="message message-status is-shown credit-message">
+                                <p class="message-copy is-hidden credit-error-msg" data-credit-error="<%- model.credit_status.error %>">
+                                    <%= _.sprintf(gettext("An error occurred with this transaction. For help, contact %(support_email)s."),
+                                    {
+                                        support_email:_.sprintf('<a href="mailto:%(address)s">%(address)s</a>',{ address:settings.default_feedback_email })
+                                    }) %>
+                                </p>
+                                <div class="credit-action">
+                                <% if (!model.credit_status.purchased && !modal.credit_status.error){ %>
+                                    <p class="message-copy credit-msg credit-eligibility-msg">
+                                        <%
+                                        // Translators: provider_name is the name of a credit provider or university (e.g. State University)
+                                        %>
+                                        <%- gettext("You have completed this course and are eligible to purchase course credit. Select <strong>Get Credit</strong> to get started.") %>
+                                    </p>
+                                    <div class="purchase_credit">
+                                        <a class="btn credit-btn purchase-credit-btn" href="<%- settings.ecoomerce_public_url_root %>/credit/checkout/<%- model.credit_status.course_key %>" target="_blank" data-course-key="<%- model.credit_status.course_key %>"><% gettext("Get Credit") %></a>
+                                    </div>
+                                <% } else if ($.inArray(model.credit_status.request_status,  [null, "pending"]) && !model.credit_status.error) {
+                                    if (model.credit_status.request_status === "pending") { %>
+                                        <p class="message-copy credit-msg credit-request-pending-msg">
+                                            <%
+                                            // Translators: provider_name is the name of a credit provider or university (e.g. State University)
+                                            %>
+                                            <%= _.sprintf(gettext("%(provider_name)s has received your course credit request. We will update you when credit processing is complete."),
+                                            {
+                                                provider_name: model.credit_status.provider_name
+                                            })
+                                            %>
+                                        </p>
+                                    <% } else if (model.credit_status.request_status === null){ %>
+                                        <p class="message-copy credit-msg credit-request-pending-msg">
+                                            <%
+                                            // Translators: link_to_provider_site is a link to an external webpage. The text of the link will be the name of a
+                                            // credit provider, such as 'State University' or 'Happy Fun Company'.
+                                            %>
+                                            <%= _.sprintf(gettext("Thank you for your payment. To receive course credit, you must now request credit at the %(link_to_provider_site)s  website. Select <b>Request Credit</b> to get started."),
+                                            {
+                                                 link_to_provider_site: provider_link
+                                            }) %>
+                                        </p>
+                                    <% } %>
+                                <a class="btn credit-btn access-credit-btn" href="<%- model.credit_status.provider_status_url %>" target="_blank"><%- gettext("View Details") %></a>
+                                <% } else if (model.credit_status.request_status === "approved" && !model.credit_status.error){ %>
+                                    <p class="message-copy credit-msg credit-request-approved-msg">
+                                        <%
+                                        // Translators: link_to_provider_site is a link to an external webpage. The text of the link will be the name of a
+                                        // credit provider, such as 'State University' or 'Happy Fun Company'. provider_name is the name of credit provider.
+                                        %>
+                                        <%= _.sprintf(gettext("<b>Congratulations!</b> %(provider_name)s has approved your request for course credit. To see your course credit, visit the %(link_to_provider_site)s website."),
+                                        {
+                                            provider_name:model.credit_status.provider_name,
+                                            link_to_provider_site: provider_link
+                                        }) %>
+                                    </p>
+                                    <a class="btn credit-btn access-credit-btn" href="<%- model.credit_status.provider_status_url %>" target="_blank"><%- gettext("View Credit") %></a>
+                                <% } else if (model.credit_status.request_status  === "rejected" && !model.credit_status.error){ %>
+                                    <p class="message-copy credit-msg credit-request-rejected-msg">
+                                        <%
+                                        // Translators: link_to_provider_site is a link to an external webpage. The text of the link will be the name of a
+                                        // credit provider, such as 'State University' or 'Happy Fun Company'. provider_name is the name of credit provider.
+                                        %>
+                                        <%= _.sprintf(gettext("%(provider_name)s did not approve your request for course credit. For more information, contact %(link_to_provider_site)s directly."),
+                                        {
+                                            provider_name: model.credit_status.provider_name,
+                                            link_to_provider_site: provider_link,
+                                        }) %>
+                                    </p>
+                                <% } %>
+                                </div>
+                            </li>
+                        <% }
+                    }
+                    var VERIFY_STATUS_NEED_TO_VERIFY = "verify_need_to_verify",
+                        VERIFY_STATUS_SUBMITTED = "verify_submitted",
+                        VERIFY_STATUS_APPROVED = "verify_approved",
+                        VERIFY_STATUS_NEED_TO_REVERIFY = "verify_need_to_reverify";
+
+                    if (!!model.verification_status.status && $.inArray(model.verification_status.status,[VERIFY_STATUS_NEED_TO_VERIFY, VERIFY_STATUS_SUBMITTED, VERIFY_STATUS_APPROVED, VERIFY_STATUS_NEED_TO_REVERIFY]) && !model.is_course_blocked) { %>
+                        <li class="message message-status wrapper-message-primary is-shown">
+                            <% if (model.verification_status.status === VERIFY_STATUS_NEED_TO_VERIFY) { %>
+                                <div class="verification-reminder">
+                                    <% if (model.verification_status.days_until_deadline != null) { %>
+                                        <h4 class="message-title"><%- gettext('Verification not yet complete.') %></h4>
+
+                                        <p class="message-copy">
+                                            <%= _.sprintf(gettext('You only have %(days)s day(s) left to verify for this course.'), {days: model.verification_status.days_until_deadline}) %></p>
+                                    <% } else { %>
+                                        <h4 class="message-title"><%- gettext('Almost there!') %></h4>
+                                        <p class="message-copy"><%- gettext('You still need to verify for this course.') %></p>
+                                    <% } %>
+                                </div>
+                                <div class="verification-cta">
+                                    <a href="<%- model.student_verify_now_url %>"
+                                       class="cta" data-course-id="<%- model.course_key %>"><%- gettext('Verify Now') %></a>
+                                </div>
+                            <% } else if (model.verification_status.status === VERIFY_STATUS_SUBMITTED) { %>
+                                <h4 class="message-title"><%- gettext('You have already verified your ID!') %></h4>
+
+                                <p class="message-copy"><%- gettext('Thanks for your patience as we process your request.') %></p>
+                            <% } else if (model.verification_status.status === VERIFY_STATUS_APPROVED) { %>
+                                <h4 class="message-title"><%- gettext('You have already verified your ID!') %></h4>
+                                <% if (model.verification_status.verification_good_until != null){ %>
+                                    <p class="message-copy"><%= _.sprintf(gettext('Your verification status is good until %(date)s.'), { date: model.verification_status.verification_good_until}) %>
+                                <% } %>
+                            <% } else if (model.verification_status.status === VERIFY_STATUS_NEED_TO_REVERIFY) { %>
+                                <h4 class="message-title"><%- gettext('Your verification will expire soon!') %></h4>
+                                <%
+                                // Translators: start_link and end_link will be replaced with HTML tags;
+                                // please do not translate these.
+                                %>
+                                <p class="message-copy"><%= _.sprintf(gettext('Your current verification will expire before the verification deadline for this course. %(start_link)s Re-verify your identity now %(end_link)s using a webcam and a government-issued ID.'),
+                                {
+                                    start_link:_.sprintf('<a href="%(href)s">',{href:settings.student_reverify_url}),
+                                    end_link:'</a>'
+                                }) %>
+                                </p>
+                            <% } %>
+                        </li>
+                    <% }
+
+                    if (model.course_mode_info.show_upsell && !model.is_course_blocked) { %>
+                        <li class="message message-upsell has-actions is-shown">
+                            <div class="wrapper-extended">
+                                <p class="message-copy" align="justify">
+                                    <b class="message-copy-bold">
+                                        <%= _.sprintf(gettext("Pursue a %(cert_name_long)s to highlight the knowledge and skills you gain in this course."), {cert_name_long:settings.cert_name_long}) %>
+                                    </b>
+                                    <br>
+                                    <%= _.sprintf(gettext("It's official. It's easily shareable. It's a proven motivator to complete the course. <br>%(link_start)s Learn more about the verified %(cert_name_long)s %(link_end)s."),
+                                    {
+                                        link_start:_.sprintf('<a href="%(href)s" class="verified-info" data-course-key="%(course_key)s">',
+                                                    {
+                                                        href:'/what_is_verified_cert',
+                                                        course_key: model.course_key
+                                                    }),
+                                        link_end:"</a>",
+                                        cert_name_long: settings.cert_name_long
+                                    }) %>
+                                </p>
+
+                                <div class="action-upgrade-container">
+                                    <a class="action action-upgrade"
+                                       href="<%- model.student_upgrade_and_verify_url %>"
+                                       data-course-id="<%- model.course_key %>" data-user="<%- settings.username %>">
+                                        <i class="action-upgrade-icon"></i>
+                                        <span class="wrapper-copy">
+                                          <span class="copy" id="upgrade-to-verified"><%- gettext("Upgrade to Verified") %></span>
+                                        </span>
+                                    </a>
+                                </div>
+                            </div>
+                        </li>
+                    <% }
+
+                    if (model.course_program_info && model.course_program_info.category === 'xseries') {
+                        var xseries_btn_class = "xseries-border-btn";
+                        if (model.course_mode === "verified"){
+                            xseries_btn_class = "xseries-base-btn";
+                        }
+                    %>
+                    <div class="message message-status is-shown credit-message">
+                        <div class="xseries-action">
+                            <div class="message-copy xseries-msg">
+                                <p>
+                                    <b class="message-copy-bold"><%= _.sprintf(gettext("%(category)s Program: Interested in more courses in this subject?"), {category:model.course_program_info.display_category}) %></b>
+                                <p>
+                                <p class="message-copy">
+                                    <%= _.sprintf(gettext("This course is 1 of %(course_count)s courses in the %(link_start)s %(program_display_name)s %(link_end)s %(program_category)s."),
+                                    {
+                                        course_count: model.course_program_info.course_count,
+                                        link_start:_.sprintf('<a href="%(program_marketing_url)s">',{program_marketing_url:model.course_program_info.program_marketing_url}),
+                                        link_end:'</a>',
+                                        program_display_name:model.course_program_info.display_name,
+                                        program_category:model.course_program_info.display_category,
+                                    }) %>
+                                </p>
+
+                            </div>
+                            <a class="btn <%- xseries_btn_class %>" href="<%- model.course_program_info.program_marketing_url %>" target="_blank">
+                                <i class="action-xseries-icon"></i>
+                                <span>
+                                    <%= _.sprintf(gettext("View %(category)s Details"), {category:model.course_program_info.display_category}) %>
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <% }
+                    if (model.is_course_blocked){ %>
+                        <li class="message">
+                            <p id="block-course-msg" class="course-block">
+                                <%= _.sprintf(gettext("You can no longer access this course because payment has not yet been received. You can %(contact_link_start)s contact the account holder %(contact_link_end)s to request payment, or you can %(unenroll_link_start)s unenroll %(unenroll_link_end)s from this course"),
+                                {
+                                    contact_link_start:'<a href="#">',
+                                    contact_link_end:'</a>',
+                                    unenroll_link_start:_.sprintf('<a id="unregister_block_course" rel="leanModal" data-course-id="%(course_id)s" data-course-number="%(course_number)s" data-course-name="%(course_name)s" href="#unenroll-modal">',
+                                    {
+                                        course_id: model.course_key,
+                                        course_number:model.course_number,
+                                        course_name:model.course_name,
+                                    }),
+                                    unenroll_link_end:"</a>",
+                                }) %>
+                            </p>
+                        </li>
+                    <% }
+                    if (model.course_requirements){ %>
+                        <%
+                        // Multiple pre-requisite courses are not supported on frontend that's why we are pulling first element
+                        %>
+                        <li class="prerequisites">
+                            <p class="tip">
+                                <%= _.sprintf(gettext("You must successfully complete %(link_start)s %(prc_display)s %(link_end)s before you begin this course."),
+                                {
+                                    link_start: _.sprintf('<a href="/courses/%(course_key)s/about">', {course_key: model.course_requirements.courses[0].key}),
+                                    link_end:'</a>',
+                                    prc_display: model.course_requirements.courses[0].display,
+                                }) %>
+                            </p>
+                        </li>
+                    <% } %>
+                </ul>
+            </footer>
+        </article>
+    </div>
+    <div>
+        <section id="email-settings-modal" class="modal" aria-hidden="true">
+            <div class="inner-wrapper" role="dialog" aria-labelledby="email-settings-title">
+                <button class="close-modal">
+                    <i class="icon fa fa-remove"></i>
+                    <span class="sr">
+                        <%
+                            // Translators: this is a control to allow users to exit out of this modal interface (a menu or piece of UI that takes the full focus of the screen)
+                        %>
+                        <%- gettext("Close") %>
+                    </span>
+                </button>
+                <header>
+                    <h2 id="email-settings-title">
+                        <%= _.sprintf(gettext("Email Settings for %(course_number)s"), {course_number:'<span id="email_settings_course_number"></span>'}) %>
+                        <span class="sr">,
+                            <%
+                                // Translators: this text gives status on if the modal interface (a menu or piece of UI that takes the full focus of the screen) is open or not
+                            %>
+                            <%- gettext("window open") %>
+                        </span>
+                    </h2>
+                    <hr/>
+                </header>
+                <form id="email_settings_form" method="post">
+                    <input name="course_id" id="email_settings_course_id" type="hidden"/>
+                    <label>
+                        <%- gettext("Receive course emails") %> <input type="checkbox" id="receive_emails" name="receive_emails"/>
+                    </label>
+                    <div class="submit">
+                        <input type="submit" id="submit" value="<%- gettext("Save Settings") %>"/>
+                    </div>
+                </form>
+            </div>
+        </section>
+        <section id="unenroll-modal" class="modal unenroll-modal" aria-hidden="true">
+            <div class="inner-wrapper" role="dialog" aria-labelledby="unenrollment-modal-title">
+                <button class="close-modal">
+                    <i class="icon fa fa-remove"></i>
+                    <span class="sr">
+                        <%
+                            // Translators: this is a control to allow users to exit out of this modal interface (a menu or piece of UI that takes the full focus of the screen)
+                        %>
+                        <%- gettext("Close") %>
+                    </span>
+                </button>
+                <header>
+                    <h2 id="unenrollment-modal-title">
+                        <span id='track-info'></span>
+                        <span id='refund-info'></span>
+                        <span class="sr">,
+                            <%
+                                // Translators: this text gives status on if the modal interface (a menu or piece of UI that takes the full focus of the screen) is open or not
+                            %>
+                            <%- gettext("window open") %>
+                        </span>
+                    </h2>
+                    <hr/>
+                </header>
+                <div id="unenroll_error" class="modal-form-error"></div>
+                <form id="unenroll_form" method="post" data-remote="true" action="<%- settings.change_enrollment %>">
+                    <input name="course_id" id="unenroll_course_id" type="hidden"/>
+                    <input name="enrollment_action" type="hidden" value="unenroll"/>
+                    <div class="submit">
+                        <input name="submit" type="submit" value="<%- gettext("Unenroll") %>"/>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
