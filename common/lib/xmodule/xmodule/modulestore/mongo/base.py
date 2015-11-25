@@ -986,12 +986,14 @@ class MongoModuleStore(ModuleStoreDraftAndPublished, ModuleStoreWriteBase, Mongo
             }
 
         course_org_filter = kwargs.get('org')
+
         query = {'_id.category': 'course'}
 
         if course_org_filter:
             query['_id.org'] = course_org_filter
 
         course_records = self.collection.find(query, {'metadata': True})
+        meta_only = {'metadata': True}
 
         courses_summaries = []
         for course in course_records:

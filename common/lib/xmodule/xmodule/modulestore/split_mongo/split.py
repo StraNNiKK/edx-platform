@@ -987,6 +987,7 @@ class SplitMongoModuleStore(SplitBulkWriteMixin, ModuleStoreWriteBase):
             }
 
         courses_summaries = []
+
         for entry, structure_info in self._get_course_blocks_for_branch(branch, **kwargs):
             course_locator = self._create_course_locator(structure_info, branch=None)
             course_block = [
