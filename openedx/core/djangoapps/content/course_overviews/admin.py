@@ -5,7 +5,8 @@ name, and start dates, but don't actually need to crawl into course content.
 """
 from django.contrib import admin
 
-from .models import CourseOverview
+from config_models.admin import ConfigurationModelAdmin
+from .models import CourseOverview, CourseOverviewImageConfig
 
 
 class CourseOverviewAdmin(admin.ModelAdmin):
@@ -35,4 +36,15 @@ class CourseOverviewAdmin(admin.ModelAdmin):
     search_fields = ['id', 'display_name']
 
 
+class CourseOverviewImageConfigAdmin(ConfigurationModelAdmin):
+    list_display = [
+        'change_date',
+        'changed_by',
+        'large_width',
+        'large_height',
+        'small_width',
+        'small_height'
+    ]
+
 admin.site.register(CourseOverview, CourseOverviewAdmin)
+admin.site.register(CourseOverviewImageConfig, CourseOverviewImageConfigAdmin)
