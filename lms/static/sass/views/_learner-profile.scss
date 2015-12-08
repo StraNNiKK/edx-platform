@@ -372,6 +372,28 @@
                     font-weight: bold;
                     color: $blue-s3;
                 }
+                .share-button-container {
+                    @extend %t-action3;
+                    background-color: $gray-l6;
+                    color: $gray-d1;
+                    padding: ($baseline / 4) ($baseline / 2);
+                    margin-bottom: ($baseline / 2);
+                    display: inline-block;
+                    border-radius: 5px;
+                    border: 2px solid $gray-d1;
+                    cursor: pointer;
+                    .share-prefix {
+                        display: inline-block;
+                        vertical-align: middle;
+                    }
+                    .share-icon-container {
+                        display: inline-block;
+                        img.icon-mozillaopenbadges {
+                            max-width: 1.5em;
+                            margin-right: .25em;
+                        }
+                    }
+                }
             }
         }
         .badge-placeholder {
