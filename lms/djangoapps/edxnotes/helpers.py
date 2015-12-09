@@ -1,11 +1,12 @@
 """
 Helper methods related to EdxNotes.
 """
-
 import json
 import logging
 from json import JSONEncoder
 from uuid import uuid4
+import urlparse
+from urllib import urlencode
 
 import requests
 from datetime import datetime
@@ -34,6 +35,8 @@ HIGHLIGHT_TAG = "span"
 HIGHLIGHT_CLASS = "note-highlight"
 # OAuth2 Client name for edxnotes
 CLIENT_NAME = "edx-notes"
+DEFAULT_PAGE = 1
+DEFAULT_PAGE_SIZE = 10
 
 
 class NoteJSONEncoder(JSONEncoder):
@@ -63,7 +66,7 @@ def get_token_url(course_id):
     })
 
 
-def send_request(user, course_id, path="", query_string=None):
+def send_request(user, course_id, page, page_size, path="", query_string=None):
     """
     Sends a request with appropriate parameters and headers.
     """
@@ -71,6 +74,8 @@ def send_request(user, course_id, path="", query_string=None):
     params = {
         "user": anonymous_id_for_user(user, None),
         "course_id": unicode(course_id).encode("utf-8"),
+        "page": page,
+        "page_size": page_size,
     }
 
     if query_string:
@@ -239,39 +244,80 @@ def get_index(usage_key, children):
     return children.index(usage_key)
 
 
-def search(user, course, query_string):
+def construct_urls(request, course_id, api_next_url, api_previous_url):
     """
-    Returns search results for the `query_string(str)`.
+    Construct next and previous urls.
+
+    Arguments:
+        course_id: course id
+        api_next_url: notes api next url
+        api_previous_url: notes api previous url
+
+    Returns:
+        next_url: lms notes next url
+        previous_url: lms notes previous url
     """
-    response = send_request(user, course.id, "search", query_string)
-    try:
-        content = json.loads(response.content)
-        collection = content["rows"]
-    except (ValueError, KeyError):
-        log.warning("invalid JSON: %s", response.content)
-        raise EdxNotesParseError(_("Server error. Please try again in a few minutes."))
+    def encoded_params(url):
+        """
+        Extract and return encoded params
+        """
+        keys = ('page', 'page_size', 'text')
+        parsed = urlparse.urlparse(url)
+        query_params = urlparse.parse_qs(parsed.query)
 
-    content.update({
-        "rows": preprocess_collection(user, course, collection)
-    })
+        return urlencode({key: query_params.get(key)[0] for key in keys if key in query_params})
 
-    return json.dumps(content, cls=NoteJSONEncoder)
+    base_url = reverse("notes", kwargs={"course_id": course_id})
+    next_url = api_next_url
+    previous_url = api_previous_url
+
+    if request.is_secure():
+        host = 'https://' + request.get_host()
+    else:
+        host = 'http://' + request.get_host()
+
+    if next_url:
+        next_url = '{host}{base_url}?{query_params}'.format(
+            host=host,
+            base_url=base_url,
+            query_params=encoded_params(next_url)
+        )
+
+    if previous_url:
+        previous_url = '{host}{base_url}?{query_params}'.format(
+            host=host,
+            base_url=base_url,
+            query_params=encoded_params(previous_url)
+        )
+
+    return next_url, previous_url
 
 
-def get_notes(user, course):
+def get_notes(request, course, path='annotations', page=1, page_size=10, query_string=None):
     """
-    Returns all notes for the user.
+    Returns paginated list of notes for the user.
     """
-    response = send_request(user, course.id, "annotations")
+    response = send_request(request.user, course.id, page, page_size, path, query_string)
+
     try:
         collection = json.loads(response.content)
     except ValueError:
-        return None
+        raise EdxNotesParseError(_("Bad Response."))
 
-    if not collection:
-        return None
+    # Verify response dict structure
+    expected_keys = ['count', 'results', 'num_pages', 'next', 'previous', 'current']
+    keys_length = len(collection.keys())
+    if not keys_length or not all(key in expected_keys for key in collection.keys()):
+        raise EdxNotesParseError(_("Bad Response."))
 
-    return json.dumps(preprocess_collection(user, course, collection), cls=NoteJSONEncoder)
+    filtered_results = preprocess_collection(request.user, course, collection['results'])
+    collection['results'] = filtered_results
+
+    next_url, previous_url = construct_urls(request, course.id, collection['next'], collection['previous'])
+    collection['next'] = next_url
+    collection['previous'] = previous_url
+
+    return json.dumps(collection, cls=NoteJSONEncoder)
 
 
 def get_endpoint(api_url, path=""):
