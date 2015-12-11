@@ -125,9 +125,12 @@
                 })
             ];
 
+            var badgeCollection = new BadgeCollection();
+            badgeCollection.url = options.badges_api_url;
+
             var badgeListingView = new BadgeListingView({
                 'attributes': {'class': 'badge-set-display'},
-                'url': options.badge_api_url,
+                'collection': badgeCollection,
                 'find_courses_url': options.find_courses_url
             });
 

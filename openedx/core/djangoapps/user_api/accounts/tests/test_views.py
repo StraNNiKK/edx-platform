@@ -9,7 +9,6 @@ import ddt
 import hashlib
 import json
 
-from lms.djangoapps.badges.tests.factories import BadgeAssertionFactory
 from mock import patch
 from pytz import UTC
 import unittest
@@ -110,8 +109,6 @@ class UserAPITestCase(APITestCase):
         legacy_profile.profile_image_uploaded_at = TEST_PROFILE_IMAGE_UPLOADED_AT
         legacy_profile.language_proficiencies.add(LanguageProficiency(code='en'))
         legacy_profile.save()
-        for dummy in range(3):
-            BadgeAssertionFactory.create(user=self.user)
 
 
 @ddt.ddt

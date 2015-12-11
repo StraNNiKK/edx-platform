@@ -105,7 +105,9 @@ define(['underscore'], function(_) {
         expect(learnerProfileView.$('.wrapper-profile-section-two').length).toBe(0);
     };
 
-    var expectModeToggleToBeHidden = function(modeToggleView) {
+    var expectModeToggleToBeHidden = function(requests, modeToggleView) {
+        // Unrelated initial request, no badge request
+        expect(requests.length).toBe(1);
         expect(modeToggleView.$el.is(':visible')).toBe(false);
     };
 
@@ -129,8 +131,11 @@ define(['underscore'], function(_) {
         expect(learnerProfileView.$el.find('.wrapper-profile-section-two').is(':visible')).toBe(true);
     };
 
-    var exampleBadges = [{
-        "user": "http://localhost:8000/api/mobile/v0.5/users/honor",
+    var exampleBadges = {
+        "count": 3,
+        "previous": null,
+        "num_pages": 1,
+        "results": [{
             "badge_class": {
                 "slug": "test_slug_0_0753941808621",
                 "issuing_component": "test_component",
@@ -143,7 +148,7 @@ define(['underscore'], function(_) {
             "image_url": "http://example.com/image.png",
             "assertion_url": "http://example.com/example.json",
             "created_at": "2015-12-03T16:25:57.676113Z"
-        }, {"user": "http://localhost:8000/api/mobile/v0.5/users/honor",
+        }, {
             "badge_class": {
                 "slug": "test_slug_0_978058171531",
                 "issuing_component": "test_component",
@@ -156,7 +161,7 @@ define(['underscore'], function(_) {
             "image_url": "http://example.com/image.png",
             "assertion_url": "http://example.com/example.json",
             "created_at": "2015-12-03T16:25:58.904203Z"
-        }, {"user": "http://localhost:8000/api/mobile/v0.5/users/honor",
+        }, {
             "badge_class": {
                 "slug": "test_slug_0_851200237578",
                 "issuing_component": "test_component",
@@ -168,8 +173,15 @@ define(['underscore'], function(_) {
             },
             "image_url": "http://example.com/image.png",
             "assertion_url": "http://example.com/example.json",
-            "created_at": "2015-12-03T16:25:59.316850Z"
-    }];
+            "created": "2015-12-03T16:25:59.316850Z"
+    }]};
+
+    var emptyBadges = {
+        "count": 0,
+        "previous": null,
+        "num_pages": 1,
+        "results": []
+    };
 
     return {
         expectLimitedProfileSectionsAndFieldsToBeRendered: expectLimitedProfileSectionsAndFieldsToBeRendered,
@@ -177,6 +189,6 @@ define(['underscore'], function(_) {
         expectProfileSectionsNotToBeRendered: expectProfileSectionsNotToBeRendered,
         expectModeToggleToBeHidden: expectModeToggleToBeHidden, expectModeToggleToBeShown: expectModeToggleToBeShown,
         expectBadgesDisplayed: expectBadgesDisplayed, expectBadgesHidden: expectBadgesHidden,
-        exampleBadges: exampleBadges
+        exampleBadges: exampleBadges, emptyBadges: emptyBadges
     };
 });

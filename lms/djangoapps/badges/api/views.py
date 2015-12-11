@@ -6,6 +6,7 @@ from opaque_keys.edx.keys import CourseKey
 from rest_framework import generics
 from rest_framework.exceptions import APIException
 
+from openedx.core.lib.api.permissions import is_field_shared_factory
 from openedx.core.lib.api.view_utils import view_auth_classes
 from badges.models import BadgeAssertion
 from .serializers import BadgeAssertionSerializer
@@ -20,7 +21,7 @@ class CourseKeyError(APIException):
     default_detail = "The course key provided could not be parsed."
 
 
-@view_auth_classes(is_user=True)
+@view_auth_classes()
 class UserBadgeAssertions(generics.ListAPIView):
     """
     ** Use cases **
@@ -89,6 +90,7 @@ class UserBadgeAssertions(generics.ListAPIView):
         }
     """
     serializer_class = BadgeAssertionSerializer
+    permission_classes = (is_field_shared_factory("has_accomplishments"),)
 
     def get_queryset(self):
         """

@@ -3,9 +3,12 @@ API library for Django REST Framework permissions-oriented workflows
 """
 
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from rest_framework import permissions
 from django.http import Http404
 
+from student.helpers import visible_fields
 from student.roles import CourseStaffRole
 
 
@@ -80,3 +83,29 @@ class IsStaffOrReadOnly(permissions.BasePermission):
         return (request.user.is_staff or
                 CourseStaffRole(obj.course_id).has_user(request.user) or
                 request.method in permissions.SAFE_METHODS)
+
+
+def is_field_shared_factory(field_name):
+    """
+    Generates a permission class that grants access if a particular profile field is
+    shared with the requesting user.
+    """
+
+    class IsFieldShared(permissions.BasePermission):
+        """
+        Grants access if a particular profile field is shared with the requesting user.
+        """
+        def has_permission(self, request, view):
+            url_username = request.parser_context.get('kwargs', {}).get('username', '')
+            if request.user.username.lower() == url_username.lower():
+                return True
+            # Staff can always see profiles.
+            if request.user.is_staff:
+                return True
+            # This should never return Multiple, as we don't allow case name collisions on registration.
+            user = get_object_or_404(User, username__icase=url_username)
+            if field_name in visible_fields(user.profile, request.user):
+                return True
+            raise Http404()
+
+    return IsFieldShared

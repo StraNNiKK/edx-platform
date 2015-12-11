@@ -3,6 +3,7 @@ define(['underscore'], function(_) {
 
     var USER_ACCOUNTS_API_URL = '/api/user/v0/accounts/student';
     var USER_PREFERENCES_API_URL = '/api/user/v0/preferences/student';
+    var BADGES_API_URL = '/api/badges/v1/assertions/student/';
     var IMAGE_UPLOAD_API_URL = '/api/profile_images/v0/staff/upload';
     var IMAGE_REMOVE_API_URL = '/api/profile_images/v0/staff/remove';
 
@@ -109,6 +110,7 @@ define(['underscore'], function(_) {
     return {
         USER_ACCOUNTS_API_URL: USER_ACCOUNTS_API_URL,
         USER_PREFERENCES_API_URL: USER_PREFERENCES_API_URL,
+        BADGES_API_URL: BADGES_API_URL,
         IMAGE_UPLOAD_API_URL: IMAGE_UPLOAD_API_URL,
         IMAGE_REMOVE_API_URL: IMAGE_REMOVE_API_URL,
         IMAGE_MAX_BYTES: IMAGE_MAX_BYTES,

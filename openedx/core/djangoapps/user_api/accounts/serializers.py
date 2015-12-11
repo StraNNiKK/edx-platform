@@ -6,15 +6,13 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
-from lms.djangoapps.badges.api.serializers import BadgeAssertionSerializer
 from openedx.core.djangoapps.user_api.accounts import NAME_MIN_LENGTH
 from openedx.core.djangoapps.user_api.serializers import ReadOnlyFieldsSerializerMixin
-
+from student.helpers import get_profile_visibility, visible_fields
 from student.models import UserProfile, LanguageProficiency
-from ..models import UserPreference
 from .image_helpers import get_profile_image_urls_for_user
 from . import (
-    ACCOUNT_VISIBILITY_PREF_KEY, ALL_USERS_VISIBILITY, PRIVATE_VISIBILITY,
+    ALL_USERS_VISIBILITY
 )
 
 
@@ -98,43 +96,19 @@ class UserReadOnlySerializer(serializers.Serializer):
             "level_of_education": AccountLegacyProfileSerializer.convert_empty_to_None(profile.level_of_education),
             "mailing_address": profile.mailing_address,
             "requires_parental_consent": profile.requires_parental_consent(),
-            "account_privacy": self._get_profile_visibility(profile, user),
             "has_accomplishments": has_accomplishments,
+            "account_privacy": get_profile_visibility(profile, user, self.configuration),
         }
 
+        if self.custom_fields:
+            fields = self.custom_fields
+        else:
+            fields = visible_fields(profile, user, self.configuration)
+
         return self._filter_fields(
-            self._visible_fields(profile, user),
+            fields,
             data
         )
-
-    def _visible_fields(self, user_profile, user):
-        """
-        Return what fields should be visible based on user settings
-
-        :param user_profile: User profile object
-        :param user: User object
-        :return: whitelist List of fields to be shown
-        """
-
-        if self.custom_fields:
-            return self.custom_fields
-
-        profile_visibility = self._get_profile_visibility(user_profile, user)
-
-        if profile_visibility == ALL_USERS_VISIBILITY:
-            return self.configuration.get('shareable_fields')
-        else:
-            return self.configuration.get('public_fields')
-
-    def _get_profile_visibility(self, user_profile, user):
-        """Returns the visibility level for the specified user profile."""
-        if user_profile.requires_parental_consent():
-            return PRIVATE_VISIBILITY
-
-        # Calling UserPreference directly because the requesting user may be different from existing_user
-        # (and does not have to be is_staff).
-        profile_privacy = UserPreference.get_value(user, ACCOUNT_VISIBILITY_PREF_KEY)
-        return profile_privacy if profile_privacy else self.configuration.get('default_visibility')
 
     def _filter_fields(self, field_whitelist, serialized_account):
         """

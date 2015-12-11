@@ -7,7 +7,7 @@
   <div class="badge-date-stamp">
     <%-
       interpolate(
-        gettext('Earned %(created_at)s.'),
+        gettext('Earned %(created)s.'),
         {created_at: created_at.format('LL')},
         true
       )

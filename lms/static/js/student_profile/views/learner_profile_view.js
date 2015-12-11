@@ -34,13 +34,15 @@
                     ownProfile: this.options.ownProfile,
                     showFullProfile: this.showFullProfile()
                 }));
-                if (this.showFullProfile() && (
-                        this.options.accountSettingsModel.get('has_accomplishments') !== false)
+                if (this.showFullProfile() && (this.options.accountSettingsModel.get('has_accomplishments'))
                 ) {
-                    var badges = this.options.badgeListingView.render().$el;
-                    badges.hide();
-                    this.$el.find('.wrapper-badges').append(badges);
-                    this.$el.find('.wrapper-toggle').append(this.modeToggleView.render().$el);
+                    var self = this;
+                    this.options.badgeListingView.collection.fetch().done(function() {
+                        var badges = self.options.badgeListingView.render().$el;
+                        badges.hide();
+                        self.$el.find('.wrapper-badges').append(badges);
+                        self.$el.find('.wrapper-toggle').append(self.modeToggleView.render().$el);
+                    });
                 }
 
                 this.renderFields();
