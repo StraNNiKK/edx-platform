@@ -6,7 +6,7 @@ name, and start dates, but don't actually need to crawl into course content.
 from django.contrib import admin
 
 from config_models.admin import ConfigurationModelAdmin
-from .models import CourseOverview, CourseOverviewImageConfig
+from .models import CourseOverview, CourseOverviewImageConfig, CourseOverviewImageSet
 
 
 class CourseOverviewAdmin(admin.ModelAdmin):
@@ -40,11 +40,34 @@ class CourseOverviewImageConfigAdmin(ConfigurationModelAdmin):
     list_display = [
         'change_date',
         'changed_by',
+        'enabled',
         'large_width',
         'large_height',
         'small_width',
         'small_height'
     ]
 
+    def get_list_display(self, request):
+        """Restore default list_display behavior.
+
+        ConfigurationModelAdmin overrides this, but in a way that doesn't
+        respect the ordering. This lets us customize it the usual Django admin
+        way.
+        """
+        return self.list_display
+
+
+class CourseOverviewImageSetAdmin(admin.ModelAdmin):
+    list_display = [
+        'course_overview',
+        'small_url',
+        'large_url',
+    ]
+    search_fields = ['course_overview__id']
+    readonly_fields = ['course_overview_id']
+    fields = ('course_overview_id', 'small_url', 'large_url')
+
+
 admin.site.register(CourseOverview, CourseOverviewAdmin)
 admin.site.register(CourseOverviewImageConfig, CourseOverviewImageConfigAdmin)
+admin.site.register(CourseOverviewImageSet, CourseOverviewImageSetAdmin)

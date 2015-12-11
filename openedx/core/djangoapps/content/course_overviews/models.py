@@ -265,6 +265,13 @@ class CourseOverview(TimeStampedModel):
                 course_overview = None
         except cls.DoesNotExist:
             course_overview = None
+
+        # Regenerate the thumbnail images if they're missing (either because
+        # they were never generated, or because they were flushed out after
+        # a change to CourseOverviewImageConfig.
+        if course_overview and not hasattr(course_overview, 'image_set'):
+            CourseOverviewImageSet.create_for_course(course_overview)
+
         return course_overview or cls.load_from_module_store(course_id)
 
     def clean_id(self, padding_char='='):
@@ -510,6 +517,9 @@ class CourseOverview(TimeStampedModel):
 
         return urls
 
+    def __unicode__(self):
+        return unicode(self.id)
+
 
 class CourseOverviewTab(models.Model):
     """
@@ -530,7 +540,7 @@ class CourseOverviewImageSet(TimeStampedModel):
     large_url = models.TextField(blank=True, default="")
 
     @classmethod
-    def create_for_course(cls, course_overview, course):
+    def create_for_course(cls, course_overview, course=None):
         """
         Create thumbnail images for this CourseOverview.
 
@@ -543,6 +553,9 @@ class CourseOverviewImageSet(TimeStampedModel):
         # If this image thumbnails are not enabled, do nothing.
         if not config.enabled:
             return
+
+        if not course:
+            course = modulestore().get_course(course_overview.id)
 
         image_set = CourseOverviewImageSet(course_overview=course_overview)
         if course.course_image:
