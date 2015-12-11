@@ -820,3 +820,32 @@ class CertificatesViewsTests(ModuleStoreTestCase, EventTrackingTestCase):
                         else:
                             self.assertContains(response, "Tweet this Accomplishment")
                         self.assertContains(response, 'https://twitter.com/intent/tweet')
+
+    @override_settings(FEATURES=FEATURES_WITH_CERTS_ENABLED)
+    def test_certificate_branding(self):
+        """
+        Test that link urls in certificate web view are customized according to site branding.
+        """
+        self._add_course_certificates(count=1, signatory_count=1, is_active=True)
+
+        self.course.save()
+        self.store.update_item(self.course, self.user.id)
+
+        test_url = get_certificate_url(
+            user_id=self.user.id,
+            course_id=unicode(self.course.id)
+        )
+        response = self.client.get(test_url, HTTP_HOST=settings.MICROSITE_TEST_HOSTNAME)
+        # Test an item from urls
+        self.assertIn(
+            settings.MICROSITE_CONFIGURATION['test_microsite']['logo_image_url'],
+            response.content
+        )
+        self.assertIn(
+            settings.MKTG_URL_LINK_MAP['ABOUT'],
+            response.content
+        )
+        self.assertIn(
+            settings.MKTG_URL_LINK_MAP['PRIVACY'],
+            response.content
+        )

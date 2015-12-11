@@ -23,8 +23,8 @@ from microsite_configuration import microsite
 from edxmako.shortcuts import marketing_link
 from branding.models import BrandingApiConfig
 
-
 log = logging.getLogger("edx.footer")
+EMPTY_URL = '#'
 
 
 def is_enabled():
@@ -329,3 +329,63 @@ def _absolute_url_staticfile(is_secure, name):
     # For local development, the returned URL will be relative,
     # so we need to make it absolute.
     return _absolute_url(is_secure, url_path)
+
+
+def get_microsite_url(name):
+    """
+    Look up and return the value for given url name in microsite configuration.
+    Return '#' if given url name is not defined in microsite configuration.
+    """
+    url = microsite.get_value(name)
+    if url:
+        return url
+    else:
+        return EMPTY_URL
+
+
+def get_url(name):
+    """
+    Lookup and return page url, lookup is preformed in the following order
+
+    1. get marketing link, if marketing is off then platform url will be used
+    2. override page url with microsite url if present
+
+    :return: string containing page url.
+    """
+    # get marketing link, if marketing is disabled then platform url will be used instead.
+    url = marketing_link(name)
+
+    # Update about page link with microsite link. (if available)
+    microsite_url = get_microsite_url(name)
+    if microsite_url != EMPTY_URL:
+        url = microsite_url
+
+    return url
+
+
+def get_base_url():
+    """
+    Return Base URL for site/microsite.
+    """
+    return _absolute_url(True, "")
+
+
+def get_tos_and_honor_code_url():
+    """
+    Lookup and return terms of services page url
+    """
+    return get_url("TOS_AND_HONOR")
+
+
+def get_privacy_url():
+    """
+    Lookup and return privacy policies page url
+    """
+    return get_url("PRIVACY")
+
+
+def get_about_url():
+    """
+    Lookup and return About page url
+    """
+    return get_url("ABOUT")

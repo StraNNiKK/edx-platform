@@ -34,7 +34,9 @@ from certificates.api import (
     get_certificate_url,
     emit_certificate_event,
     has_html_certificates_enabled,
-    get_certificate_template
+    get_certificate_template,
+    get_certificate_header,
+    get_certificate_footer
 )
 from certificates.models import (
     GeneratedCertificate,
@@ -488,6 +490,10 @@ def render_html_view(request, user_id, course_id):
     context = {}
     _update_context_with_basic_info(context, course_id, platform_name, configuration)
     invalid_template_path = 'certificates/invalid.html'
+
+    # Update context with brand specific urls
+    context.update(get_certificate_header())
+    context.update(get_certificate_footer())
 
     # Kick the user back to the "Invalid" screen if the feature is disabled
     if not has_html_certificates_enabled(course_id):
