@@ -41,7 +41,7 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
     NEXT_MONTH = TODAY + datetime.timedelta(days=30)
 
     COURSE_OVERVIEW_TABS = {'courseware', 'info', 'textbooks', 'discussion', 'wiki', 'progress'}
-
+3
     def check_course_overview_against_course(self, course):
         """
         Compares a CourseOverview object against its corresponding
@@ -485,3 +485,9 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
             {c.id for c in CourseOverview.get_all_courses(org='TEST_ORG_1')},
             {c.id for c in org_courses[1]},
         )
+
+
+class CourseOverviewImageTestCase(ModuleStoreTestCase):
+
+    def test_urls(self):
+        pass

@@ -518,6 +518,7 @@ class CourseOverview(TimeStampedModel):
         return urls
 
     def __unicode__(self):
+        """Represent ourselves with the course key."""
         return unicode(self.id)
 
 
@@ -532,10 +533,66 @@ class CourseOverviewTab(models.Model):
 class CourseOverviewImageSet(TimeStampedModel):
     """
     Model for Course overview images. Each column is an image type/size.
+
+    You should basically never use this class directly. Read from
+    CourseOverview.image_urls instead.
+
+    Special Notes on Deployment/Rollback/Changes:
+
+    1. By default, this functionality is disabled. To turn it on, you have to
+       create a CourseOverviewImageConfig entry via Django Admin and select
+       enabled=True.
+
+    2. If it is enabled in configuration, it will lazily create thumbnails as
+       individual CourseOverviews are requested. This is independent of the
+       CourseOverview's cls.VERSION scheme. This is to better support the use
+       case where someone might want to change the thumbnail resolutions for
+       their theme -- we didn't want to tie the code-based data schema of
+       CourseOverview to configuration changes.
+
+    3. A CourseOverviewImageSet is automatically deleted when the CourseOverview
+       it belongs to is deleted. So it will be regenerated whenever there's a
+       new publish or the CourseOverview schema version changes. It's not
+       particularly smart about this, and will just re-write the same thumbnails
+       over and over to the same location without checking to see if there were
+       changes.
+
+    4. Just because a CourseOverviewImageSet is successfully created does not
+       mean that any thumbnails exist. There might have been a processing error,
+       or there might simply be no source image to create a thumbnail out of.
+       In this case, accessing CourseOverview.image_urls will return the value
+       for course.course_image_url for all resolutions. CourseOverviewImageSet
+       will *not* try to regenerate if there is a model entry with blank values
+       for the URLs -- the assumption is that either there's no data there or
+       something has gone wrong and needs fixing in code.
+
+    5. If you want to change thumbnail resolutions, you need to create a new
+       CourseOverviewImageConfig with the desired dimensions and then wipe the
+       values in CourseOverviewImageSet.
+
+    Logical next steps that I punted on for this first cut:
+
+    1. Center cropping the image before scaling.
+
+       This is desirable, but it involves a few edge cases (what the rounding)
+       policy is, what to do with undersized images, etc.) The behavior that
+       we implemented is at least no worse than what was already there in terms
+       of distorting images.
+
+    2. Automatically invalidating entries based on CourseOverviewImageConfig.
+
+       There are two basic paths I can think of for this. The first is to
+       completely wipe this table when the config changes. The second is to
+       actually tie the config as a foreign key from this model -- so you could
+       do the comparison to see if the image_set's config_id matched
+       CourseOverviewImageConfig.current() and invalidate it if they didn't
+       match. I punted on this mostly because it's just not something that
+       happens much at all in practice, there is an understood (if manual)
+       process to do it, and it can happen in a follow-on PR if anyone is
+       interested in extending this functionality.
+
     """
-    course_overview = models.OneToOneField(
-        CourseOverview, db_index=True, related_name="image_set"
-    )
+    course_overview = models.OneToOneField(CourseOverview, db_index=True, related_name="image_set")
     small_url = models.TextField(blank=True, default="")
     large_url = models.TextField(blank=True, default="")
 
@@ -548,12 +605,15 @@ class CourseOverviewImageSet(TimeStampedModel):
         """
         from openedx.core.lib.courses import create_course_image_thumbnail, course_image_url
 
+        # If image thumbnails are not enabled, do nothing.
         config = CourseOverviewImageConfig.current()
-
-        # If this image thumbnails are not enabled, do nothing.
         if not config.enabled:
             return
 
+        # If a course object was provided, use that. Otherwise, pull it from
+        # CourseOverview's course_id. This happens because sometimes we are
+        # generated as part of the CourseOverview creation (course is available
+        # and passed in), and sometimes the CourseOverview already exists.
         if not course:
             course = modulestore().get_course(course_overview.id)
 
@@ -573,8 +633,17 @@ class CourseOverviewImageSet(TimeStampedModel):
                 )
 
         # Regardless of whether we created thumbnails or not, we need to save
-        # this record before returning.
-        image_set.save()
+        # this record before returning. If no thumbnails were created (there was
+        # an error or the course has no source course_image), our url fields
+        # just keep their blank defaults.
+        try:
+            image_set.save()
+            course_overview.image_set = image_set
+        except IntegrityError:
+            # In the event of a race condition that tries to save two image sets
+            # to the same CourseOverview, we'll just silently pass on the one
+            # that fails. They should be the same data anyway.
+            pass
 
 
 class CourseOverviewImageConfig(ConfigurationModel):

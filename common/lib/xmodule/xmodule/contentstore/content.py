@@ -285,6 +285,7 @@ class ContentStore(object):
                 im = im.convert('RGB')
                 if not dimensions:
                     dimensions = 128, 128
+
                 im.thumbnail(dimensions, Image.ANTIALIAS)
                 thumbnail_file = StringIO.StringIO()
                 im.save(thumbnail_file, 'JPEG')
