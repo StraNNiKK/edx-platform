@@ -503,8 +503,13 @@ class CourseOverview(TimeStampedModel):
         """
         Return a dict with all known URLs for this course image.
 
-        If no thumbnails exist, the raw image will be returned for all requested
-        resolutions.
+        Current resolutions are:
+          raw = original upload from the user
+          small = thumbnail with dimensions CourseOverviewImageConfig.current().small
+          large = thumbnail with dimensions CourseOverviewImageConfig.current().large
+
+        If no thumbnails exist, the raw (originally uploaded) image will be
+        returned for all resolutions.
         """
         # This is either the raw image that the course team uploaded, or the
         # settings.DEFAULT_COURSE_ABOUT_IMAGE_URL if they didn't specify one.
