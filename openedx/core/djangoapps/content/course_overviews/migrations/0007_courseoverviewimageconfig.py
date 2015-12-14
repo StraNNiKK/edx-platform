@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('course_overviews', '0005_courseoverviewimageset'),
+        ('course_overviews', '0006_courseoverviewimageset'),
     ]
 
     operations = [

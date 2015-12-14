@@ -9,7 +9,7 @@ import model_utils.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('course_overviews', '0004_courseoverview_org'),
+        ('course_overviews', '0005_delete_courseoverviewgeneratedhistory'),
     ]
 
     operations = [

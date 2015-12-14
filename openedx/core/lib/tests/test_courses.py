@@ -30,6 +30,14 @@ class CourseImageTestCase(ModuleStoreTestCase):
             course_image_url(course)
         )
 
+    def test_get_image_url(self):
+        """Test image URL formatting."""
+        course = CourseFactory.create()
+        self.verify_url(
+            unicode(course.id.make_asset_key('asset', course.course_image)),
+            course_image_url(course)
+        )
+
     def test_non_ascii_image_name(self):
         """ Verify that non-ascii image names are cleaned """
         course_image = u'before_\N{SNOWMAN}_after.jpg'
