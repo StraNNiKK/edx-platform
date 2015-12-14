@@ -506,14 +506,25 @@ class CourseOverview(TimeStampedModel):
         If no thumbnails exist, the raw image will be returned for all requested
         resolutions.
         """
-        urls = dict(
-            raw=self.course_image_url,
-            small=self.course_image_url,
-            large=self.course_image_url
-        )
+        # This is either the raw image that the course team uploaded, or the
+        # settings.DEFAULT_COURSE_ABOUT_IMAGE_URL if they didn't specify one.
+        raw_image_url = self.course_image_url
+
+        # Default all sizes to return the raw image if there is no
+        # CourseOverviewImageSet associated with this CourseOverview. This can
+        # happen because we're disabled via CourseOverviewImageConfig.
+        urls = {
+            'raw': raw_image_url,
+            'small': raw_image_url,
+            'large': raw_image_url,
+        }
+
+        # If we do have a CourseOverviewImageSet, we still default to the raw
+        # images if our thumbnails are blank (might indicate that there was a
+        # processing error of some sort while trying to generate thumbnails).
         if hasattr(self, 'image_set'):
-            urls['small'] = self.image_set.small_url
-            urls['large'] = self.image_set.large_url
+            urls['small'] = self.image_set.small_url or raw_image_url
+            urls['large'] = self.image_set.large_url or raw_image_url
 
         return urls
 
