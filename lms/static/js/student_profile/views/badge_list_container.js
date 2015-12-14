@@ -13,6 +13,6 @@
                 isZeroIndexed: true
             });
 
-            return BadgeListContainer
+            return BadgeListContainer;
         });
 }).call(this, define || RequireJS.define);
