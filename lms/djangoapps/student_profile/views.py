@@ -74,7 +74,6 @@ def learner_profile_context(request, profile_username, user_is_staff):
             'default_public_account_fields': settings.ACCOUNT_VISIBILITY_CONFIGURATION['public_fields'],
             'default_visibility': settings.ACCOUNT_VISIBILITY_CONFIGURATION['default_visibility'],
             'accounts_api_url': reverse("accounts_api", kwargs={'username': profile_username}),
-            'badges_api_url': reverse("badges_api:user_assertions", kwargs={'username': profile_username}),
             'preferences_api_url': reverse('preferences_api', kwargs={'username': profile_username}),
             'preferences_data': preferences_data,
             'account_settings_data': account_settings_data,
@@ -92,4 +91,8 @@ def learner_profile_context(request, profile_username, user_is_staff):
         },
         'disable_courseware_js': True,
     }
+
+    if settings.FEATURES.get("ENABLE_OPENBADGES"):
+        context['data']['badges_api_url'] = reverse("badges_api:user_assertions", kwargs={'username': profile_username})
+
     return context

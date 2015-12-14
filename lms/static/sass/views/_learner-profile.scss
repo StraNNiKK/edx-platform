@@ -314,7 +314,7 @@
     }
 
     .badge-paging-header {
-        @extend .container;
+        padding-top: $baseline;
     }
 
     .pagination {

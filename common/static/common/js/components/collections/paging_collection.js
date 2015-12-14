@@ -46,7 +46,7 @@
                     page_size: function () { return self.perPage; },
                     text_search: function () { return self.searchString ? self.searchString : ''; },
                     sort_order: function () { return self.sortField; }
-                }
+                };
             },
 
             self: this,

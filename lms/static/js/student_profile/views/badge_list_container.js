@@ -2,12 +2,15 @@
     'use strict';
     define([
         'gettext', 'jquery', 'underscore', 'common/js/components/views/paginated_view',
-        'js/student_profile/views/badge_view', 'js/student_profile/views/badge_list_view'],
-        function (gettext, $, _, PaginatedView, BadgeView, BadgeListView) {
+        'js/student_profile/views/badge_view', 'js/student_profile/views/badge_list_view',
+        'text!templates/student_profile/badge_list.underscore'],
+        function (gettext, $, _, PaginatedView, BadgeView, BadgeListView, BadgeListTemplate) {
             var BadgeListContainer = PaginatedView.extend({
                 type: 'badge',
                 itemViewClass: BadgeView,
-                listViewClass: BadgeListView
+                listViewClass: BadgeListView,
+                viewTemplate: BadgeListTemplate,
+                isZeroIndexed: true
             });
 
             return BadgeListContainer

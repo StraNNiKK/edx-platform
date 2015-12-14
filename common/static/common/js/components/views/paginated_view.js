@@ -41,6 +41,8 @@
 
             listViewClass: ListView,
 
+            viewTemplate: paginatedViewTemplate,
+
             createHeaderView: function() {
                 return new PagingHeader({collection: this.options.collection, srInfo: this.srInfo});
             },
@@ -52,7 +54,7 @@
             },
 
             render: function () {
-                this.$el.html(_.template(paginatedViewTemplate, {type: this.type}));
+                this.$el.html(_.template(this.viewTemplate, {type: this.type}));
                 this.assign(this.listView, '.' + this.type + '-list');
                 if (this.headerView) {
                     this.assign(this.headerView, '.' + this.type + '-paging-header');

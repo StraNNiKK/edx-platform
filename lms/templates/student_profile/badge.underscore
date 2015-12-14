@@ -1,5 +1,5 @@
 <div class="badge-image-container">
-  <img class="badge" src="<%- image_url %>"/>
+  <img class="badge" src="<%- image_url %>" alt=""/>
 </div>
 <div class="badge-details">
   <div class="badge-name"><%- badge_class.display_name %></div>

@@ -81,7 +81,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     modeToggleView = context.learnerProfileView.modeToggleView;
 
                 requests.currentIndex = 1;
-                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.exampleBadges);
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
 
                 LearnerProfileHelpers.expectModeToggleToBeShown(modeToggleView);
             });
@@ -109,11 +109,30 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     badgeListContainer = context.badgeListContainer;
 
                 requests.currentIndex = 1;
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.secondPageBadges);
+
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
+                modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, 10, false);
+                modeToggleView.$el.find('[data-section=".wrapper-profile-section-two"]').click();
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
+            });
+
+            it("displays a placeholder on the last page of badges", function () {
+
+                requests = AjaxHelpers.requests(this);
+
+                var context = createProfilePage(true, {has_accomplishments: true}),
+                    learnerProfileView = context.learnerProfileView,
+                    modeToggleView = learnerProfileView.modeToggleView,
+                    badgeListContainer = context.badgeListContainer;
+
+                requests.currentIndex = 1;
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.thirdPageBadges);
 
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
-                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, 10, true);
                 modeToggleView.$el.find('[data-section=".wrapper-profile-section-two"]').click();
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
             });
@@ -124,7 +143,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 var context = createProfilePage(true, {has_accomplishments: true}),
                     learnerProfileView = context.learnerProfileView,
-                    modeToggleView = context.learnerProfileView.modeToggleView,
+                    modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
 
                 requests.currentIndex = 1;
@@ -132,7 +151,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
-                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, true);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, 0, true);
                 modeToggleView.$el.find('[data-section=".wrapper-profile-section-two"]').click();
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
             });
@@ -149,16 +168,40 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
 
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
-                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, 10, false);
                 LearnerProfileHelpers.expectPage(badgeListContainer, LearnerProfileHelpers.firstPageBadges);
             });
 
-            it("allows selection of an arbitrary page of badges", function() {
-
-            });
-
             it("allows forward and backward navigation of badges", function () {
+                requests = AjaxHelpers.requests(this);
 
+                var context = createProfilePage(true, {has_accomplishments: true}),
+                    learnerProfileView = context.learnerProfileView,
+                    modeToggleView = learnerProfileView.modeToggleView,
+                    badgeListContainer = context.badgeListContainer;
+
+                requests.currentIndex = 1;
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
+
+                modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
+
+                badgeListContainer.$el.find('.next-page-link').click();
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.secondPageBadges);
+                LearnerProfileHelpers.expectPage(badgeListContainer, LearnerProfileHelpers.secondPageBadges);
+
+                badgeListContainer.$el.find('.next-page-link').click();
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.thirdPageBadges);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, 10, true);
+                LearnerProfileHelpers.expectPage(badgeListContainer, LearnerProfileHelpers.thirdPageBadges);
+
+                badgeListContainer.$el.find('.previous-page-link').click();
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.secondPageBadges);
+                LearnerProfileHelpers.expectPage(badgeListContainer, LearnerProfileHelpers.secondPageBadges);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, 10, false);
+
+                badgeListContainer.$el.find('.previous-page-link').click();
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
+                LearnerProfileHelpers.expectPage(badgeListContainer, LearnerProfileHelpers.firstPageBadges);
             });
 
 

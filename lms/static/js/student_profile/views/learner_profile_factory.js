@@ -126,7 +126,7 @@
             ];
 
             var badgeCollection = new PagingCollection();
-            badgeCollection.url = options.badges_api_url;
+            badgeCollection.url = options.badges_api_url || "/dummy/url";
 
             var badgeListContainer = new BadgeListContainer({
                 'attributes': {'class': 'badge-set-display'},

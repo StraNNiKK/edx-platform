@@ -115,18 +115,14 @@ define(['underscore'], function(_) {
         expect(modeToggleView.$el.is(':visible')).toBe(true);
     };
 
-    var expectBadgesDisplayed = function(badgeListingView, learnerProfileView, empty) {
+    var expectBadgesDisplayed = function(badgeListingView, learnerProfileView, length, lastPage) {
         expect(learnerProfileView.$el.find('.wrapper-profile-section-two').is(':visible')).toBe(false);
         expect(badgeListingView.$el.is(':visible')).toBe(true);
-        console.log(badgeListingView.$el.find('.badge-display'));
-        console.log(badgeListingView.$el);
-        debugger;
-        if (empty) {
-            expect(badgeListingView.$el.find('.badge-display').length).toBe(1);
-        } else {
-            expect(badgeListingView.$el.find('.badge-display').length).toBe(4);
+        if (lastPage) {
+            length += 1;
+            expect(badgeListingView.$el.find('.find-button-container').length).toBe(1);
         }
-        expect(badgeListingView.$el.find('.find-button-container').length).toBe(1);
+        expect(badgeListingView.$el.find('.badge-display').length).toBe(length);
     };
 
     var expectBadgesHidden = function(badgeListingView, learnerProfileView) {
@@ -135,38 +131,39 @@ define(['underscore'], function(_) {
     };
 
     var expectPage = function(badgeListContainer, pageData) {
-        var index = badgeListContainer.$el.find('div.search_tools span');
-        expect(index.text()).toBe("Showing "  + pageData.start + "-" + pageData.start + pageData.results.length +
-            "out of " + pageData.count + " total ");
+        var index = badgeListContainer.$el.find('span.search-count').text().trim();
+        expect(index).toBe("Showing "  + (pageData.start + 1) + "-" + (pageData.start + pageData.results.length) +
+            " out of " + pageData.count + " total");
         expect(badgeListContainer.$el.find('.current-page').text()).toBe("" + pageData.current_page);
         _.each(pageData.results, function(badge) {
-            expect($(":contains(" + badge.name + ")").length).toBe(1)
-        })
+            expect($(".badge-display:contains(" + badge.badge_class.display_name + ")").length).toBe(1);
+        });
     };
 
     var firstPageBadges = {
-        count: 53,
+        count: 30,
         previous: null,
         next: "/arbitrary/url",
-        num_pages: 6,
+        num_pages: 3,
         start: 0,
         current_page: 1,
         results: []
     };
 
     var secondPageBadges = {
-        count: 53,
+        count: 30,
         previous: "/arbitrary/url",
         next: "/arbitrary/url",
-        num_pages: 6,
+        num_pages: 3,
         start: 10,
         current_page: 2,
         results: []
     };
 
     var thirdPageBadges = {
-        count: 53,
+        count: 30,
         previous: "/arbitrary/url",
+        num_pages: 3,
         next: null,
         start: 20,
         current_page: 3,
@@ -187,19 +184,19 @@ define(['underscore'], function(_) {
             "image_url": "http://example.com/image.png",
             "assertion_url": "http://example.com/example.json",
             "created_at": "2015-12-03T16:25:57.676113Z"
-        }
+        };
     }
 
     _.each(_.range(0, 10), function(i) {
-        firstPageBadges.results.push(makeBadge(i))
+        firstPageBadges.results.push(makeBadge(i));
     });
 
     _.each(_.range(10, 20), function(i) {
-        secondPageBadges.results.push(makeBadge(i))
+        secondPageBadges.results.push(makeBadge(i));
     });
 
     _.each(_.range(20, 30), function(i) {
-        thirdPageBadges.results.push(makeBadge(i))
+        thirdPageBadges.results.push(makeBadge(i));
     });
 
     var emptyBadges = {
