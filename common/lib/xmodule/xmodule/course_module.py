@@ -903,7 +903,7 @@ class CourseFields(object):
             "topics is a list of topics."
         ),
         scope=Scope.settings,
-        deprecated=True,  # Deprecated until the teams feature is made generally available
+        deprecated=False,  # Deprecated until the teams feature is made generally available
     )
 
     enable_proctored_exams = Boolean(

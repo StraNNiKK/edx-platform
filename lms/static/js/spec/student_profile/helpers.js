@@ -118,6 +118,9 @@ define(['underscore'], function(_) {
     var expectBadgesDisplayed = function(badgeListingView, learnerProfileView, empty) {
         expect(learnerProfileView.$el.find('.wrapper-profile-section-two').is(':visible')).toBe(false);
         expect(badgeListingView.$el.is(':visible')).toBe(true);
+        console.log(badgeListingView.$el.find('.badge-display'));
+        console.log(badgeListingView.$el);
+        debugger;
         if (empty) {
             expect(badgeListingView.$el.find('.badge-display').length).toBe(1);
         } else {
@@ -131,15 +134,51 @@ define(['underscore'], function(_) {
         expect(learnerProfileView.$el.find('.wrapper-profile-section-two').is(':visible')).toBe(true);
     };
 
-    var exampleBadges = {
-        "count": 3,
-        "previous": null,
-        "num_pages": 1,
-        "results": [{
+    var expectPage = function(badgeListContainer, pageData) {
+        var index = badgeListContainer.$el.find('div.search_tools span');
+        expect(index.text()).toBe("Showing "  + pageData.start + "-" + pageData.start + pageData.results.length +
+            "out of " + pageData.count + " total ");
+        expect(badgeListContainer.$el.find('.current-page').text()).toBe("" + pageData.current_page);
+        _.each(pageData.results, function(badge) {
+            expect($(":contains(" + badge.name + ")").length).toBe(1)
+        })
+    };
+
+    var firstPageBadges = {
+        count: 53,
+        previous: null,
+        next: "/arbitrary/url",
+        num_pages: 6,
+        start: 0,
+        current_page: 1,
+        results: []
+    };
+
+    var secondPageBadges = {
+        count: 53,
+        previous: "/arbitrary/url",
+        next: "/arbitrary/url",
+        num_pages: 6,
+        start: 10,
+        current_page: 2,
+        results: []
+    };
+
+    var thirdPageBadges = {
+        count: 53,
+        previous: "/arbitrary/url",
+        next: null,
+        start: 20,
+        current_page: 3,
+        results: []
+    };
+
+    function makeBadge (num) {
+        return {
             "badge_class": {
-                "slug": "test_slug_0_0753941808621",
+                "slug": "test_slug_" + num,
                 "issuing_component": "test_component",
-                "display_name": "Test Badge",
+                "display_name": "Test Badge " + num,
                 "course_id": null,
                 "description": "Yay! It's a test badge.",
                 "criteria": "https://example.com/syllabus",
@@ -148,33 +187,20 @@ define(['underscore'], function(_) {
             "image_url": "http://example.com/image.png",
             "assertion_url": "http://example.com/example.json",
             "created_at": "2015-12-03T16:25:57.676113Z"
-        }, {
-            "badge_class": {
-                "slug": "test_slug_0_978058171531",
-                "issuing_component": "test_component",
-                "display_name": "Test Badge",
-                "course_id": null,
-                "description": "Yay! It's a test badge.",
-                "criteria": "https://example.com/syllabus",
-                "image_url": "http://localhost:8000/media/badge_classes/test_YMRswqm.png"
-            },
-            "image_url": "http://example.com/image.png",
-            "assertion_url": "http://example.com/example.json",
-            "created_at": "2015-12-03T16:25:58.904203Z"
-        }, {
-            "badge_class": {
-                "slug": "test_slug_0_851200237578",
-                "issuing_component": "test_component",
-                "display_name": "Test Badge",
-                "course_id": null,
-                "description": "Yay! It's a test badge.",
-                "criteria": "https://example.com/syllabus",
-                "image_url": "http://localhost:8000/media/badge_classes/test_Z4sKJDu.png"
-            },
-            "image_url": "http://example.com/image.png",
-            "assertion_url": "http://example.com/example.json",
-            "created": "2015-12-03T16:25:59.316850Z"
-    }]};
+        }
+    }
+
+    _.each(_.range(0, 10), function(i) {
+        firstPageBadges.results.push(makeBadge(i))
+    });
+
+    _.each(_.range(10, 20), function(i) {
+        secondPageBadges.results.push(makeBadge(i))
+    });
+
+    _.each(_.range(20, 30), function(i) {
+        thirdPageBadges.results.push(makeBadge(i))
+    });
 
     var emptyBadges = {
         "count": 0,
@@ -189,6 +215,7 @@ define(['underscore'], function(_) {
         expectProfileSectionsNotToBeRendered: expectProfileSectionsNotToBeRendered,
         expectModeToggleToBeHidden: expectModeToggleToBeHidden, expectModeToggleToBeShown: expectModeToggleToBeShown,
         expectBadgesDisplayed: expectBadgesDisplayed, expectBadgesHidden: expectBadgesHidden,
-        exampleBadges: exampleBadges, emptyBadges: emptyBadges
+        firstPageBadges: firstPageBadges, secondPageBadges: secondPageBadges, thirdPageBadges: thirdPageBadges,
+        emptyBadges: emptyBadges, expectPage: expectPage
     };
 });

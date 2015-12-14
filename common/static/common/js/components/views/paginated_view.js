@@ -26,7 +26,7 @@
     ], function (Backbone, _, PagingHeader, PagingFooter, ListView, paginatedViewTemplate) {
         var PaginatedView = Backbone.View.extend({
             initialize: function () {
-                var ItemListView = ListView.extend({
+                var ItemListView = this.listViewClass.extend({
                     tagName: 'div',
                     className: this.type  + '-container',
                     itemViewClass: this.itemViewClass
@@ -38,6 +38,8 @@
                     this.$('.sr-is-focusable.sr-' + this.type + '-view').focus();
                 }, this);
             },
+
+            listViewClass: ListView,
 
             createHeaderView: function() {
                 return new PagingHeader({collection: this.options.collection, srInfo: this.srInfo});

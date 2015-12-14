@@ -106,36 +106,61 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 var context = createProfilePage(true, {has_accomplishments: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = learnerProfileView.modeToggleView,
-                    badgeListingView = context.badgeListingView;
+                    badgeListContainer = context.badgeListContainer;
 
                 requests.currentIndex = 1;
-                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.exampleBadges);
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.thirdPageBadges);
 
-                LearnerProfileHelpers.expectBadgesHidden(badgeListingView, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
-                LearnerProfileHelpers.expectBadgesDisplayed(badgeListingView, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView);
                 modeToggleView.$el.find('[data-section=".wrapper-profile-section-two"]').click();
-                LearnerProfileHelpers.expectBadgesHidden(badgeListingView, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
             });
 
             it("displays a placeholder when the accomplishments toggle is selected and no badges exist", function () {
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments:true}),
+                var context = createProfilePage(true, {has_accomplishments: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = context.learnerProfileView.modeToggleView,
-                    badgeListingView = context.badgeListingView;
+                    badgeListContainer = context.badgeListContainer;
 
                 requests.currentIndex = 1;
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.emptyBadges);
 
-                LearnerProfileHelpers.expectBadgesHidden(badgeListingView, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
-                LearnerProfileHelpers.expectBadgesDisplayed(badgeListingView, learnerProfileView, true);
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView, true);
                 modeToggleView.$el.find('[data-section=".wrapper-profile-section-two"]').click();
-                LearnerProfileHelpers.expectBadgesHidden(badgeListingView, learnerProfileView);
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
             });
+
+            it("shows a paginated list of badges", function() {
+                requests = AjaxHelpers.requests(this);
+
+                var context = createProfilePage(true, {has_accomplishments: true}),
+                    learnerProfileView = context.learnerProfileView,
+                    modeToggleView = learnerProfileView.modeToggleView,
+                    badgeListContainer = context.badgeListContainer;
+
+                requests.currentIndex = 1;
+                AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
+
+                modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
+                LearnerProfileHelpers.expectBadgesDisplayed(badgeListContainer, learnerProfileView);
+                LearnerProfileHelpers.expectPage(badgeListContainer, LearnerProfileHelpers.firstPageBadges);
+            });
+
+            it("allows selection of an arbitrary page of badges", function() {
+
+            });
+
+            it("allows forward and backward navigation of badges", function () {
+
+            });
+
 
             it("renders the limited profile for under 13 users", function() {
 

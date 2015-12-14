@@ -8,7 +8,7 @@
     <%-
       interpolate(
         gettext('Earned %(created)s.'),
-        {created_at: created_at.format('LL')},
+        {created: created.format('LL')},
         true
       )
     %></div>

@@ -37,8 +37,8 @@
                 if (this.showFullProfile() && (this.options.accountSettingsModel.get('has_accomplishments'))
                 ) {
                     var self = this;
-                    this.options.badgeListingView.collection.fetch().done(function() {
-                        var badges = self.options.badgeListingView.render().$el;
+                    this.options.badgeListContainer.collection.fetch().done(function() {
+                        var badges = self.options.badgeListContainer.render().$el;
                         badges.hide();
                         self.$el.find('.wrapper-badges').append(badges);
                         self.$el.find('.wrapper-toggle').append(self.modeToggleView.render().$el);

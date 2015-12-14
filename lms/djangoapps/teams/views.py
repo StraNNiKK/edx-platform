@@ -77,37 +77,12 @@ def team_post_save_callback(sender, instance, **kwargs):  # pylint: disable=unus
                 )
 
 
-class TeamAPIPagination(DefaultPagination):
-    """
-    Pagination format used by the teams API.
-    """
-    page_size_query_param = "page_size"
-
-    def get_paginated_response(self, data):
-        """
-        Annotate the response with pagination information.
-        """
-        response = super(TeamAPIPagination, self).get_paginated_response(data)
-
-        # Add the current page to the response.
-        # It may make sense to eventually move this field into the default
-        # implementation, but for now, teams is the only API that uses this.
-        response.data["current_page"] = self.page.number
-
-        # This field can be derived from other fields in the response,
-        # so it may make sense to have the JavaScript client calculate it
-        # instead of including it in the response.
-        response.data["start"] = (self.page.number - 1) * self.get_page_size(self.request)
-
-        return response
-
-
-class TopicsPagination(TeamAPIPagination):
+class TopicsPagination(DefaultPagination):
     """Paginate topics. """
     page_size = TOPICS_PER_PAGE
 
 
-class MyTeamsPagination(TeamAPIPagination):
+class MyTeamsPagination(DefaultPagination):
     """Paginate the user's teams. """
     page_size = TEAM_MEMBERSHIPS_PER_PAGE
 
@@ -128,10 +103,12 @@ class TeamsDashboardView(GenericAPIView):
         course = get_course_with_access(request.user, "load", course_key)
 
         if not is_feature_enabled(course):
+            print "Not enabled."
             raise Http404
 
         if not CourseEnrollment.is_enrolled(request.user, course.id) and \
                 not has_access(request.user, 'staff', course, course.id):
+            print "Not enrolled, or staff."
             raise Http404
 
         user = request.user
@@ -381,7 +358,6 @@ class TeamsListView(ExpandableFieldViewMixin, GenericAPIView):
     authentication_classes = (OAuth2Authentication, SessionAuthentication)
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = CourseTeamSerializer
-    pagination_class = TeamAPIPagination
 
     def get(self, request):
         """GET /api/team/v0/teams/"""
