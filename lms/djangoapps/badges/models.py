@@ -217,7 +217,7 @@ class CourseEventBadgesConfiguration(ConfigurationModel):
         help_text=_(
             u"On each line, put the number of completed courses to award a badge for, a comma, and the slug of a "
             u"badge class you have created with the issuing component 'edx__course'. "
-            u"For example: 3,course-v1:edx/Demo/DemoX"
+            u"For example: 3,hat_trick"
         )
     )
     courses_enrolled = models.TextField(
@@ -225,7 +225,7 @@ class CourseEventBadgesConfiguration(ConfigurationModel):
         help_text=_(
             u"On each line, put the number of enrolled courses to award a badge for, a comma, and the slug of a "
             u"badge class you have created with the issuing component 'edx__course'. "
-            u"For example: 3,course-v1:edx/Demo/DemoX"
+            u"For example: 3,hat_trick"
         )
     )
     course_groups = models.TextField(
