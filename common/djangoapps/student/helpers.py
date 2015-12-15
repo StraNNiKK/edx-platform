@@ -2,7 +2,6 @@
 from datetime import datetime
 import urllib
 
-from django.conf import settings
 from pytz import UTC
 from django.core.urlresolvers import reverse, NoReverseMatch
 
@@ -13,12 +12,6 @@ from course_modes.models import CourseMode
 
 # Enumeration of per-course verification statuses
 # we display on the student dashboard.
-from openedx.core.djangoapps.user_api.accounts import (
-    PRIVATE_VISIBILITY, ACCOUNT_VISIBILITY_PREF_KEY,
-    ALL_USERS_VISIBILITY
-)
-from openedx.core.djangoapps.user_api.models import UserPreference
-
 VERIFY_STATUS_NEED_TO_VERIFY = "verify_need_to_verify"
 VERIFY_STATUS_SUBMITTED = "verify_submitted"
 VERIFY_STATUS_APPROVED = "verify_approved"
@@ -237,38 +230,3 @@ def get_next_url_for_login_page(request):
         # be saved in the session as part of the pipeline state. That URL will take priority
         # over this one.
     return redirect_to
-
-
-def get_profile_visibility(user_profile, user, configuration=None):
-    """Returns the visibility level for the specified user profile."""
-    if user_profile.requires_parental_consent():
-        return PRIVATE_VISIBILITY
-
-    if not configuration:
-        configuration = settings.ACCOUNT_VISIBILITY_CONFIGURATION
-
-    # Calling UserPreference directly because the requesting user may be different from existing_user
-    # (and does not have to be is_staff).
-    profile_privacy = UserPreference.get_value(user, ACCOUNT_VISIBILITY_PREF_KEY)
-    return profile_privacy if profile_privacy else configuration.get('default_visibility')
-
-
-def visible_fields(user_profile, user, configuration=None):
-    """
-    Return what fields should be visible based on user settings
-
-    :param user_profile: User profile object
-    :param user: User object
-    :param configuration: A visibility configuration dictionary.
-    :return: whitelist List of fields to be shown
-    """
-
-    if not configuration:
-        configuration = settings.ACCOUNT_VISIBILITY_CONFIGURATION
-
-    profile_visibility = get_profile_visibility(user_profile, user, configuration)
-
-    if profile_visibility == ALL_USERS_VISIBILITY:
-        return configuration.get('shareable_fields')
-    else:
-        return configuration.get('public_fields')

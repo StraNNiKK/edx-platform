@@ -8,12 +8,9 @@ from django.core.urlresolvers import reverse
 
 from openedx.core.djangoapps.user_api.accounts import NAME_MIN_LENGTH
 from openedx.core.djangoapps.user_api.serializers import ReadOnlyFieldsSerializerMixin
-from student.helpers import get_profile_visibility, visible_fields
+from openedx.core.lib.api.permissions import get_profile_visibility, visible_fields
 from student.models import UserProfile, LanguageProficiency
 from .image_helpers import get_profile_image_urls_for_user
-from . import (
-    ALL_USERS_VISIBILITY
-)
 
 
 PROFILE_IMAGE_KEY_PREFIX = 'image_url'

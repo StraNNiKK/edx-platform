@@ -3,6 +3,7 @@ Defines the URL routes for this app.
 """
 
 from django.conf.urls import patterns, url
+
 from ..profile_images.views import ProfileImageView
 from .accounts.views import AccountView
 from .preferences.views import PreferencesView, PreferencesDetailView
