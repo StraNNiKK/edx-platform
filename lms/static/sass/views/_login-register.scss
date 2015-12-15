@@ -130,10 +130,11 @@ $sm-btn-linkedin: #0077b5;
     .toggle-form {
         @include box-sizing(border-box);
         max-width: 650px;
-        min-width: 400px;
+        min-width: 250px;
         margin: 0 auto;
         padding-left: $baseline; // Don't want to override any top or bottom (CR)
-        padding-right: $baseline // Don't want to override any top or bottom (CR)
+        padding-right: $baseline; // Don't want to override any top or bottom (CR)
+        padding-bottom: ($baseline/2);
     }
 
     .toggle-form {
