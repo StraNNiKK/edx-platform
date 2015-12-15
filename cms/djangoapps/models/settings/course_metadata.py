@@ -50,7 +50,7 @@ class CourseMetadata(object):
         'is_proctored_enabled',
         'is_time_limited',
         'is_practice_exam',
-        'self_paced',
+        'self_paced'
     ]
 
     @classmethod

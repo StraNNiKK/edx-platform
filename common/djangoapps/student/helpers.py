@@ -13,8 +13,10 @@ from course_modes.models import CourseMode
 
 # Enumeration of per-course verification statuses
 # we display on the student dashboard.
-from openedx.core.djangoapps.user_api.accounts import PRIVATE_VISIBILITY, ACCOUNT_VISIBILITY_PREF_KEY, \
+from openedx.core.djangoapps.user_api.accounts import (
+    PRIVATE_VISIBILITY, ACCOUNT_VISIBILITY_PREF_KEY,
     ALL_USERS_VISIBILITY
+)
 from openedx.core.djangoapps.user_api.models import UserPreference
 
 VERIFY_STATUS_NEED_TO_VERIFY = "verify_need_to_verify"

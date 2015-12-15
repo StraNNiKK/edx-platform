@@ -90,7 +90,7 @@ class UserBadgeAssertions(generics.ListAPIView):
         }
     """
     serializer_class = BadgeAssertionSerializer
-    permission_classes = (is_field_shared_factory("has_accomplishments"),)
+    permission_classes = (is_field_shared_factory("accomplishments_shared"),)
 
     def get_queryset(self):
         """

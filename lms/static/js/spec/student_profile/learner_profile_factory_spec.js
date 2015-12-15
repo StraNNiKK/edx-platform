@@ -67,7 +67,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: false}),
+                var context = createProfilePage(true, {accomplishments_shared: false}),
                     modeToggleView = context.learnerProfileView.modeToggleView;
 
                 LearnerProfileHelpers.expectModeToggleToBeHidden(requests, modeToggleView);
@@ -77,7 +77,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     modeToggleView = context.learnerProfileView.modeToggleView;
 
                 requests.currentIndex = 1;
@@ -90,7 +90,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     modeToggleView = context.learnerProfileView.modeToggleView;
 
                 requests.currentIndex = 1;
@@ -103,7 +103,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
@@ -122,7 +122,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
@@ -141,7 +141,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
 
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
@@ -159,7 +159,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
             it("shows a paginated list of badges", function() {
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
@@ -175,7 +175,7 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
             it("allows forward and backward navigation of badges", function () {
                 requests = AjaxHelpers.requests(this);
 
-                var context = createProfilePage(true, {has_accomplishments: true}),
+                var context = createProfilePage(true, {accomplishments_shared: true}),
                     learnerProfileView = context.learnerProfileView,
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;

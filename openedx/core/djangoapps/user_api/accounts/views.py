@@ -97,7 +97,7 @@ class AccountView(APIView):
             * year_of_birth: The year the user was born, as an integer, or null.
             * account_privacy: The user's setting for sharing her personal
               profile. Possible values are "all_users" or "private".
-            * has_accomplishments: Signals whether badges are enabled on the
+            * accomplishments_shared: Signals whether badges are enabled on the
               platform and should be fetched.
 
             For all text fields, plain text instead of HTML is supported. The

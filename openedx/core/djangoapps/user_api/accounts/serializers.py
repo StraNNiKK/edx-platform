@@ -63,7 +63,7 @@ class UserReadOnlySerializer(serializers.Serializer):
         :return: Dict serialized account
         """
         profile = user.profile
-        has_accomplishments = settings.FEATURES.get('ENABLE_OPENBADGES') or False
+        accomplishments_shared = settings.FEATURES.get('ENABLE_OPENBADGES') or False
 
         data = {
             "username": user.username,
@@ -96,7 +96,7 @@ class UserReadOnlySerializer(serializers.Serializer):
             "level_of_education": AccountLegacyProfileSerializer.convert_empty_to_None(profile.level_of_education),
             "mailing_address": profile.mailing_address,
             "requires_parental_consent": profile.requires_parental_consent(),
-            "has_accomplishments": has_accomplishments,
+            "accomplishments_shared": accomplishments_shared,
             "account_privacy": get_profile_visibility(profile, user, self.configuration),
         }
 

@@ -103,12 +103,10 @@ class TeamsDashboardView(GenericAPIView):
         course = get_course_with_access(request.user, "load", course_key)
 
         if not is_feature_enabled(course):
-            print "Not enabled."
             raise Http404
 
         if not CourseEnrollment.is_enrolled(request.user, course.id) and \
                 not has_access(request.user, 'staff', course, course.id):
-            print "Not enrolled, or staff."
             raise Http404
 
         user = request.user

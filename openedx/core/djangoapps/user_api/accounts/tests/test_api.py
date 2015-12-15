@@ -279,7 +279,7 @@ class AccountSettingsOnCreationTest(TestCase):
             'requires_parental_consent': True,
             'language_proficiencies': [],
             'account_privacy': PRIVATE_VISIBILITY,
-            'has_accomplishments': False,
+            'accomplishments_shared': False,
         })
 
 

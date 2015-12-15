@@ -26,7 +26,7 @@ define(['underscore'], function(_) {
         bio: "About the student",
         language_proficiencies: [{code: '1'}],
         profile_image: PROFILE_IMAGE,
-        has_accomplishments: false
+        accomplishments_shared: false
     };
 
     var createAccountSettingsData = function(options) {
