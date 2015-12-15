@@ -6,6 +6,10 @@
         'text!templates/student_profile/badge_list.underscore'],
         function (gettext, $, _, PaginatedView, BadgeView, BadgeListView, BadgeListTemplate) {
             var BadgeListContainer = PaginatedView.extend({
+                initialize: function (options) {
+                    BadgeListContainer.__super__.initialize.call(this, options);
+                    this.listView.find_courses_url = options.find_courses_url;
+                },
                 type: 'badge',
                 itemViewClass: BadgeView,
                 listViewClass: BadgeListView,

@@ -120,7 +120,9 @@ define(['underscore'], function(_) {
         expect(badgeListingView.$el.is(':visible')).toBe(true);
         if (lastPage) {
             length += 1;
-            expect(badgeListingView.$el.find('.find-button-container').length).toBe(1);
+            var placeholder = badgeListingView.$el.find('.find-course');
+            expect(placeholder.length).toBe(1);
+            expect(placeholder.attr('href')).toBe('/courses/')
         }
         expect(badgeListingView.$el.find('.badge-display').length).toBe(length);
     };

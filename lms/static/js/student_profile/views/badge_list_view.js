@@ -22,7 +22,8 @@
                     // Placeholder must always be at the end, and may need a new row.
                     if (!this.collection.hasNextPage()) {
                         var placeholder = _.template(
-                            badgePlaceholder,  {find_courses_url: this.options.find_courses_url}
+                            // find_courses_url set by BadgeListContainer during initialization.
+                            badgePlaceholder,  {find_courses_url: this.find_courses_url}
                         );
                         if (this.collection.length % 2 === 0) {
                             row = $('<div class="row">');
