@@ -9,6 +9,7 @@ import mock
 import pytz
 
 from django.utils import timezone
+from django.conf import settings
 
 from lms.djangoapps.certificates.api import get_active_web_certificate
 from openedx.core.djangoapps.models.course_details import CourseDetails
@@ -25,7 +26,7 @@ from xmodule.modulestore.django import modulestore
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, check_mongo_calls, check_mongo_calls_range
 
-from .models import CourseOverview
+from .models import CourseOverview, CourseOverviewImageConfig
 
 
 @ddt.ddt
@@ -41,7 +42,7 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
     NEXT_MONTH = TODAY + datetime.timedelta(days=30)
 
     COURSE_OVERVIEW_TABS = {'courseware', 'info', 'textbooks', 'discussion', 'wiki', 'progress'}
-3
+
     def check_course_overview_against_course(self, course):
         """
         Compares a CourseOverview object against its corresponding
@@ -487,7 +488,80 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         )
 
 
-class CourseOverviewImageTestCase(ModuleStoreTestCase):
+@ddt.ddt
+class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
+    """
+    v2 v3 transistion
+    no image set to image set transition
+    create image set and then transition from v2 to v3 (is it deleted properly)
+    error on thumbnail creation
+    integrity error on trying to save a image set
+    """
 
-    def test_urls(self):
+    def setUp(self):
+        """Create an active CourseOverviewImageConfig with non-default values."""
+        CourseOverviewImageConfig.objects.create(
+            enabled=True,
+            small_width=200,
+            small_height=100,
+            large_width=400,
+            large_height=200,
+        )
+        super(CourseOverviewImageSetTestCase, self).setUp()
+
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_no_source_image(self, modulestore_type):
+        """
+        Tests that we behave as expected if there is no source image specified
+        on the CourseDescriptor.
+        """
+        with self.store.default_store(modulestore_type):
+            fallback_url = settings.STATIC_URL + settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
+            for course_image in (None, ''):
+                course = CourseFactory.create(default_store=modulestore_type, course_image=course_image)
+                course_overview = CourseOverview.get_from_id(course.id)
+
+                # All the URLs that come back should be for the fallback_url
+                self.assertEqual(
+                    course_overview.image_urls,
+                    {
+                        'raw': fallback_url,
+                        'small': fallback_url,
+                        'large': fallback_url,
+                    }
+                )
+
+                # Even though there was no source image to generate, we should
+                # still have a CourseOverviewImageSet object associated with
+                # this overview.
+                self.assertTrue(hasattr(course_overview, 'image_set'))
+
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_thumbnail_generation_error(self, moduelstore_type):
+        """Test a scenario where thumbnails cannot be generated.
+
+        We need to make sure that:
+
+        a) We don't cause any 500s to leak out. A failure to generate thumbnails
+           should never cause CourseOverview generation to fail.
+        b) We return the raw course image for all resolutions.
+        c) We don't kill our CPU by trying over and over again.
+        """
+        # This is an absolute URL, not a reference to something in our content
+        # store, so thumbnail creation will fail.
+        fake_course_image_url = "https://www.edx.org/sites/default/files/theme/edx-logo-header.png"
+        with self.store.default_store(modulestore_type):
+            course = CourseFactory.create(
+                default_store=modulestore_type,
+                course_image=fake_course_image_url
+            )
+            course_overview = CourseOverview.get_from_id(course.id)
+            self.assertTrue(hasattr(course_overview, 'image_set'))
+            self.assertEqual(
+
+            )
+            # Check that the CourseOverviewImageSet thumbnail generation call happened.
+
+
+    def test_respects_config(self):
         pass
