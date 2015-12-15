@@ -14,7 +14,8 @@
                 itemViewClass: BadgeView,
                 listViewClass: BadgeListView,
                 viewTemplate: BadgeListTemplate,
-                isZeroIndexed: true
+                isZeroIndexed: true,
+                paginationLabel: gettext("Accomplishments pagination")
             });
 
             return BadgeListContainer;

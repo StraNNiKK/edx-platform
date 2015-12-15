@@ -43,13 +43,16 @@
 
             viewTemplate: paginatedViewTemplate,
 
+            paginationLabel: gettext("Pagination"),
+
             createHeaderView: function() {
                 return new PagingHeader({collection: this.options.collection, srInfo: this.srInfo});
             },
 
             createFooterView: function() {
                 return new PagingFooter({
-                    collection: this.options.collection, hideWhenOnePage: true
+                    collection: this.options.collection, hideWhenOnePage: true,
+                    paginationLabel: this.paginationLabel
                 });
             },
 
