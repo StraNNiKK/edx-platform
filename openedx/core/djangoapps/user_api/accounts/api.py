@@ -31,8 +31,12 @@ from . import (
 )
 from .serializers import (
     AccountLegacyProfileSerializer, AccountUserSerializer,
-    UserReadOnlySerializer
+    UserReadOnlySerializer, _visible_fields  # pylint: disable=invalid-name
 )
+
+
+# Public access point for this function.
+visible_fields = _visible_fields
 
 
 @intercept_errors(UserAPIInternalError, ignore_errors=[UserAPIRequestError])

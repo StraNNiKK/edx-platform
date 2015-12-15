@@ -6,9 +6,12 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
-from openedx.core.djangoapps.user_api.accounts import NAME_MIN_LENGTH
+from . import (
+    NAME_MIN_LENGTH, ACCOUNT_VISIBILITY_PREF_KEY, PRIVATE_VISIBILITY,
+    ALL_USERS_VISIBILITY,
+)
+from openedx.core.djangoapps.user_api.models import UserPreference
 from openedx.core.djangoapps.user_api.serializers import ReadOnlyFieldsSerializerMixin
-from openedx.core.lib.api.permissions import get_profile_visibility, visible_fields
 from student.models import UserProfile, LanguageProficiency
 from .image_helpers import get_profile_image_urls_for_user
 
@@ -100,7 +103,7 @@ class UserReadOnlySerializer(serializers.Serializer):
         if self.custom_fields:
             fields = self.custom_fields
         else:
-            fields = visible_fields(profile, user, self.configuration)
+            fields = _visible_fields(profile, user, self.configuration)
 
         return self._filter_fields(
             fields,
@@ -235,3 +238,38 @@ class AccountLegacyProfileSerializer(serializers.HyperlinkedModelSerializer, Rea
             ])
 
         return instance
+
+
+def get_profile_visibility(user_profile, user, configuration=None):
+    """Returns the visibility level for the specified user profile."""
+    if user_profile.requires_parental_consent():
+        return PRIVATE_VISIBILITY
+
+    if not configuration:
+        configuration = settings.ACCOUNT_VISIBILITY_CONFIGURATION
+
+    # Calling UserPreference directly because the requesting user may be different from existing_user
+    # (and does not have to be is_staff).
+    profile_privacy = UserPreference.get_value(user, ACCOUNT_VISIBILITY_PREF_KEY)
+    return profile_privacy if profile_privacy else configuration.get('default_visibility')
+
+
+def _visible_fields(user_profile, user, configuration=None):
+    """
+    Return what fields should be visible based on user settings
+
+    :param user_profile: User profile object
+    :param user: User object
+    :param configuration: A visibility configuration dictionary.
+    :return: whitelist List of fields to be shown
+    """
+
+    if not configuration:
+        configuration = settings.ACCOUNT_VISIBILITY_CONFIGURATION
+
+    profile_visibility = get_profile_visibility(user_profile, user, configuration)
+
+    if profile_visibility == ALL_USERS_VISIBILITY:
+        return configuration.get('shareable_fields')
+    else:
+        return configuration.get('public_fields')
