@@ -436,6 +436,46 @@ class TestMixedModuleStore(CommonMixedModuleStoreSetup):
                 revision=ModuleStoreEnum.RevisionOption.draft_preferred
             )
 
+    @ddt.data((ModuleStoreEnum.Type.split, 2, False), (ModuleStoreEnum.Type.mongo, 3, True))
+    @ddt.unpack
+    def test_get_items_in_tree_only(self, default_ms, expected_items_in_tree, oprhan_in_items):
+        """
+        Test `in_tree_only` option helps in returning only those items which are present in course tree.
+        """
+        self.initdb(default_ms)
+
+        test_course = self.store.create_course('testx', 'GreekHero', 'test_run', self.user_id)
+        course_key = test_course.id
+
+        # Check items found are either course or about type
+        items = self.store.get_items(course_key)
+        self.assertTrue(set(['course', 'about']).issubset(set([item.location.block_type for item in items])))
+        self.assertEqual(len(items), 2)
+
+        # Check that orphans are not found
+        orphans = self.store.get_orphans(course_key)
+        self.assertEqual(len(orphans), 0)
+
+        # Add an orphan to test course
+        orphan = course_key.make_usage_key('chapter', 'OrphanChapter')
+        self.store.create_item(self.user_id, orphan.course_key, orphan.block_type, block_id=orphan.block_id)
+
+        # Check that now an orphan is found
+        orphans = self.store.get_orphans(course_key)
+        self.assertIn(orphan, orphans)
+        self.assertEqual(len(orphans), 1)
+
+        # Check now `get_items` retrieves an extra item added above which is an orphan.
+        items = self.store.get_items(course_key)
+        self.assertIn(orphan, [item.location for item in items])
+        self.assertEqual(len(items), 3)
+
+        # Check now `get_items` with `in_tree_only` kwarg does not retrieves an orphan block.
+        items_in_tree_only = self.store.get_items(course_key, in_tree_only=True)
+
+        self.assertEqual(orphan in [item.location for item in items_in_tree_only], oprhan_in_items)
+        self.assertEqual(len(items_in_tree_only), expected_items_in_tree)
+
     # draft: get draft, get ancestors up to course (2-6), compute inheritance
     #    sends: update problem and then each ancestor up to course (edit info)
     # split: active_versions, definitions (calculator field), structures
