@@ -33,8 +33,8 @@ class Migration(migrations.Migration):
             name='BadgeClass',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('slug', models.SlugField(max_length=255)),
-                ('issuing_component', models.SlugField(default=b'', blank=True)),
+                ('slug', models.SlugField(max_length=255, validators=[badges.models.validate_lowercase])),
+                ('issuing_component', models.SlugField(default=b'', blank=True, validators=[badges.models.validate_lowercase])),
                 ('display_name', models.CharField(max_length=255)),
                 ('course_id', xmodule_django.models.CourseKeyField(default=None, max_length=255, blank=True)),
                 ('description', models.TextField()),
