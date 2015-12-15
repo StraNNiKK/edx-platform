@@ -341,7 +341,7 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
         course_overview = CourseOverview._create_from_course(course)  # pylint: disable=protected-access
         self.assertEqual(course_overview.lowest_passing_grade, None)
 
-    @ddt.data((ModuleStoreEnum.Type.mongo, 4, 4), (ModuleStoreEnum.Type.split, 3, 4))
+    @ddt.data((ModuleStoreEnum.Type.mongo, 5, 5), (ModuleStoreEnum.Type.split, 3, 4))
     @ddt.unpack
     def test_versioning(self, modulestore_type, min_mongo_calls, max_mongo_calls):
         """
@@ -509,59 +509,185 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         )
         super(CourseOverviewImageSetTestCase, self).setUp()
 
-    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
-    def test_no_source_image(self, modulestore_type):
+    def _assert_image_url_values(self, modulestore_type, raw_course_image_name, expected_url=None):
         """
-        Tests that we behave as expected if there is no source image specified
-        on the CourseDescriptor.
+        Helper function for asserting the values that come out of CourseOverview.image_urls.
+
+        Returns the CourseOverview created.
         """
-        with self.store.default_store(modulestore_type):
-            fallback_url = settings.STATIC_URL + settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
-            for course_image in (None, ''):
-                course = CourseFactory.create(default_store=modulestore_type, course_image=course_image)
-                course_overview = CourseOverview.get_from_id(course.id)
-
-                # All the URLs that come back should be for the fallback_url
-                self.assertEqual(
-                    course_overview.image_urls,
-                    {
-                        'raw': fallback_url,
-                        'small': fallback_url,
-                        'large': fallback_url,
-                    }
-                )
-
-                # Even though there was no source image to generate, we should
-                # still have a CourseOverviewImageSet object associated with
-                # this overview.
-                self.assertTrue(hasattr(course_overview, 'image_set'))
-
-    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
-    def test_thumbnail_generation_error(self, moduelstore_type):
-        """Test a scenario where thumbnails cannot be generated.
-
-        We need to make sure that:
-
-        a) We don't cause any 500s to leak out. A failure to generate thumbnails
-           should never cause CourseOverview generation to fail.
-        b) We return the raw course image for all resolutions.
-        c) We don't kill our CPU by trying over and over again.
-        """
-        # This is an absolute URL, not a reference to something in our content
-        # store, so thumbnail creation will fail.
-        fake_course_image_url = "https://www.edx.org/sites/default/files/theme/edx-logo-header.png"
         with self.store.default_store(modulestore_type):
             course = CourseFactory.create(
-                default_store=modulestore_type,
-                course_image=fake_course_image_url
+                default_store=modulestore_type, course_image=raw_course_image_name
             )
+            if expected_url is None:
+                expected_url = course_image_url(course)
+
             course_overview = CourseOverview.get_from_id(course.id)
-            self.assertTrue(hasattr(course_overview, 'image_set'))
+
+            # All the URLs that come back should be for the expected_url
             self.assertEqual(
-
+                course_overview.image_urls,
+                {
+                    'raw': expected_url,
+                    'small': expected_url,
+                    'large': expected_url,
+                }
             )
-            # Check that the CourseOverviewImageSet thumbnail generation call happened.
+            return course_overview
+
+    @ddt.data(
+        *itertools.product(
+            [ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split],
+            [None, '']
+        )
+    )
+    @ddt.unpack
+    def test_no_source_image(self, modulestore_type, course_image):
+        """
+        Tests that we behave as expected if no source image was specified.
+        """
+        # Because we're sending None and '', we expect to get the generic
+        # fallback URL for course images.
+        fallback_url = settings.STATIC_URL + settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
+        course_overview = self._assert_image_url_values(modulestore_type, course_image, fallback_url)
+
+        # Even though there was no source image to generate, we should still
+        # have a CourseOverviewImageSet object associated with this overview.
+        self.assertTrue(hasattr(course_overview, 'image_set'))
+
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_disabled_no_prior_data(self, modulestore_type):
+        """
+        Test behavior when we are disabled and no entries exist.
+
+        1. No CourseOverviewImageSet will be created.
+        2. All resolutions should return the URL of the raw source image.
+        """
+        # Disable model generation using config models...
+        CourseOverviewImageConfig.objects.all().delete()
+        CourseOverviewImageConfig.objects.create(enabled=False)
+
+        # Since we're disabled, we should just return the raw source image back
+        # for every resolution in image_urls.
+        fake_course_image = 'sample_image.png'
+        course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
+
+        # Because we are disabled, no image set should have been generated.
+        self.assertFalse(hasattr(course_overview, 'image_set'))
+
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_disabled_with_prior_data(self, modulestore_type):
+        """
+        Test behavior when entries have been created but we are disabled.
+
+        This might happen because a strange bug was introduced -- e.g. we
+        corrupt the images somehow when making thumbnails. Expectations:
+
+        1. We ignore whatever was created for the thumbnails, and image_urls
+           returns the same as if no thumbnails had ever been generated. So
+           basically, we return the raw source image for every resolution.
+        2. We keep the CourseOverviewImageSet data around for debugging
+           purposes.
+        """
+        course_image = "my_course.jpg"
+        broken_small_url = "I am small!"
+        broken_large_url = "I am big!"
+        with self.store.default_store(modulestore_type):
+            course = CourseFactory.create(
+                default_store=modulestore_type, course_image=course_image
+            )
+            course_overview_before = CourseOverview.get_from_id(course.id)
+
+        # This initial seeding should create an entry for the image_set.
+        self.assertTrue(hasattr(course_overview_before, 'image_set'))
+
+        # Now just throw in some fake data to this image set, something that
+        # couldn't possibly work.
+        course_overview_before.image_set.small_url = broken_small_url
+        course_overview_before.image_set.large_url = broken_large_url
+        course_overview_before.image_set.save()
+
+        # Now disable the thumbnail feature
+        CourseOverviewImageConfig.objects.all().delete()
+        CourseOverviewImageConfig.objects.create(enabled=False)
+
+        # Fetch a new CourseOverview
+        course_overview_after = CourseOverview.get_from_id(course.id)
+
+        # Assert that the data still exists for debugging purposes
+        self.assertTrue(hasattr(course_overview_after, 'image_set'))
+        image_set = course_overview_after.image_set
+        self.assertEqual(image_set.small_url, broken_small_url)
+        self.assertEqual(image_set.large_url, broken_large_url)
+
+        # But because we've disabled it, asking for image_urls should give us
+        # the raw source image for all resolutions, and not our broken images.
+        expected_url = course_image_url(course)
+        self.assertEqual(
+            course_overview_after.image_urls,
+            {
+                'raw': expected_url,
+                'small': expected_url,
+                'large': expected_url
+            }
+        )
+
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_error_generating_thumbnails(self, modulestore_type):
 
 
-    def test_respects_config(self):
-        pass
+        # Disable model generation using config models...
+        CourseOverviewImageConfig.objects.all().delete()
+        CourseOverviewImageConfig.objects.create(enabled=False)
+
+        # Since we're disabled, we should just return the raw source image back
+        # for every resolution in image_urls.
+        fake_course_image = 'sample_image.png'
+        course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
+
+        # Because we are disabled, no image set should have been generated.
+        self.assertFalse(hasattr(course_overview, 'image_set'))
+
+
+#    @ddt.data(
+#        *itertools.product(
+#            [ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split],
+#            [
+#                'does_not_exist',  # just a garbage value
+#                'https://www.edx.org/sites/default/files/theme/edx-logo-header.png',  # a full URL
+#            ]
+#        )
+#    )
+#    def test_thumbnail_generation_error(self, moduelstore_type):
+#        """Test a scenario where thumbnails cannot be generated.
+#
+#        We need to make sure that:
+#
+#        a) We don't cause any 500s to leak out. A failure to generate thumbnails
+#           should never cause CourseOverview generation to fail.
+#        b) We return the raw course image for all resolutions.
+#        c) We don't kill our CPU by trying over and over again.
+#        """
+#        # This is an absolute URL, not a reference to something in our content
+#        # store, so thumbnail creation will fail.
+#        fake_course_image_url = "https://www.edx.org/sites/default/files/theme/edx-logo-header.png"
+#        with self.store.default_store(modulestore_type):
+#            course = CourseFactory.create(
+#                default_store=modulestore_type,
+#                course_image=fake_course_image_url
+#            )
+#            course_overview = CourseOverview.get_from_id(course.id)
+#            self.assertTrue(hasattr(course_overview, 'image_set'))
+#            self.assertEqual(
+#                course_overview.image_urls,
+#                {
+#                    'raw': fallback_url,
+#                    'small': fallback_url,
+#                    'large': fallback_url,
+#                }
+#            )
+#            # Check that the CourseOverviewImageSet thumbnail generation call happened.
+#
+#
+#    def test_respects_config(self):
+#        pass

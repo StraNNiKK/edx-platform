@@ -527,7 +527,7 @@ class CourseOverview(TimeStampedModel):
         # If we do have a CourseOverviewImageSet, we still default to the raw
         # images if our thumbnails are blank (might indicate that there was a
         # processing error of some sort while trying to generate thumbnails).
-        if hasattr(self, 'image_set'):
+        if hasattr(self, 'image_set') and CourseOverviewImageConfig.current().enabled:
             urls['small'] = self.image_set.small_url or raw_image_url
             urls['large'] = self.image_set.large_url or raw_image_url
 
@@ -655,10 +655,17 @@ class CourseOverviewImageSet(TimeStampedModel):
         try:
             image_set.save()
             course_overview.image_set = image_set
-        except IntegrityError:
+        except (IntegrityError, ValueError):
             # In the event of a race condition that tries to save two image sets
             # to the same CourseOverview, we'll just silently pass on the one
             # that fails. They should be the same data anyway.
+            #
+            # The ValueError above is to catch the following error that can
+            # happen in Django 1.8.4+ if the CourseOverview object fails to save
+            # (again, due to race condition).
+            #
+            # Example: ValueError: save() prohibited to prevent data loss due
+            #          to unsaved related object 'course_overview'.")
             pass
 
 
