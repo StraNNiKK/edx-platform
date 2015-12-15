@@ -114,13 +114,6 @@ class AccountView(APIView):
             with other users by requesting their own username and providing
             the "view=shared" URL parameter.
 
-        **Params for GET**
-
-            * exclude: A field not to be returned in the results. This might
-              be useful if the field is expected to create a large response
-              payload (such as with badges) and it won't be used. You may
-              specify this option multiple times for multiple fields.
-
         **Response Values for PATCH**
 
             Users can only modify their own account information. If the

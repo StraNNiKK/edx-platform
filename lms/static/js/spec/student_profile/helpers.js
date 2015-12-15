@@ -122,7 +122,7 @@ define(['underscore'], function(_) {
             length += 1;
             var placeholder = badgeListingView.$el.find('.find-course');
             expect(placeholder.length).toBe(1);
-            expect(placeholder.attr('href')).toBe('/courses/')
+            expect(placeholder.attr('href')).toBe('/courses/');
         }
         expect(badgeListingView.$el.find('.badge-display').length).toBe(length);
     };

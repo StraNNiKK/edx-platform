@@ -24,10 +24,8 @@ from ..errors import (
 )
 from ..forms import PasswordResetFormNoActive
 from ..helpers import intercept_errors
-from ..models import UserPreference
 
 from . import (
-    ACCOUNT_VISIBILITY_PREF_KEY, PRIVATE_VISIBILITY,
     EMAIL_MIN_LENGTH, EMAIL_MAX_LENGTH, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
     USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
 )
@@ -54,7 +52,6 @@ def get_account_settings(request, username=None, configuration=None, view=None):
         configuration (dict): an optional configuration specifying which fields in the account
             can be shared, and the default visibility settings. If not present, the setting value with
             key ACCOUNT_VISIBILITY_CONFIGURATION is used.
-        excluded (list): an optional list of fields not to return from the user's profile.
         view (str): An optional string allowing "is_staff" users and users requesting their own
             account information to get just the fields that are shared with everyone. If view is
             "shared", only shared account information will be returned, regardless of `request.user`.
