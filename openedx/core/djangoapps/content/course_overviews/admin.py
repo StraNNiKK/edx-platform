@@ -37,6 +37,14 @@ class CourseOverviewAdmin(admin.ModelAdmin):
 
 
 class CourseOverviewImageConfigAdmin(ConfigurationModelAdmin):
+    """
+    Basic configuration for CourseOverview Image thumbnails.
+
+    By default this is disabled. If you change the dimensions of the images with
+    a new config after thumbnails have already been generated, you need to clear
+    the entries in CourseOverviewImageSet manually for new entries to be
+    created.
+    """
     list_display = [
         'change_date',
         'changed_by',
@@ -58,6 +66,10 @@ class CourseOverviewImageConfigAdmin(ConfigurationModelAdmin):
 
 
 class CourseOverviewImageSetAdmin(admin.ModelAdmin):
+    """
+    Thumbnail images associated with CourseOverviews. This should be used for
+    debugging purposes only -- e.g. don't edit these values.
+    """
     list_display = [
         'course_overview',
         'small_url',
