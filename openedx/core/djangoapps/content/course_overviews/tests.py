@@ -1,6 +1,7 @@
 """
 Tests for course_overviews app.
 """
+from cStringIO import StringIO
 import datetime
 import ddt
 import itertools
@@ -8,12 +9,17 @@ import math
 import mock
 import pytz
 
-from django.utils import timezone
 from django.conf import settings
+from django.test.utils import override_settings
+from django.utils import timezone
+from PIL import Image
 
 from lms.djangoapps.certificates.api import get_active_web_certificate
 from openedx.core.djangoapps.models.course_details import CourseDetails
 from openedx.core.lib.courses import course_image_url
+from xmodule.assetstore.assetmgr import AssetManager
+from xmodule.contentstore.django import contentstore
+from xmodule.contentstore.content import StaticContent
 from xmodule.course_metadata_utils import DEFAULT_START_DATE
 from xmodule.course_module import (
     CATALOG_VISIBILITY_CATALOG_AND_ABOUT,
@@ -491,11 +497,7 @@ class CourseOverviewTestCase(ModuleStoreTestCase):
 @ddt.ddt
 class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
     """
-    v2 v3 transistion
-    no image set to image set transition
-    create image set and then transition from v2 to v3 (is it deleted properly)
-    error on thumbnail creation
-    integrity error on trying to save a image set
+    Course thumbnail generation tests.
     """
 
     def setUp(self):
@@ -509,32 +511,8 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         )
         super(CourseOverviewImageSetTestCase, self).setUp()
 
-    def _assert_image_url_values(self, modulestore_type, raw_course_image_name, expected_url=None):
-        """
-        Helper function for asserting the values that come out of CourseOverview.image_urls.
-
-        Returns the CourseOverview created.
-        """
-        with self.store.default_store(modulestore_type):
-            course = CourseFactory.create(
-                default_store=modulestore_type, course_image=raw_course_image_name
-            )
-            if expected_url is None:
-                expected_url = course_image_url(course)
-
-            course_overview = CourseOverview.get_from_id(course.id)
-
-            # All the URLs that come back should be for the expected_url
-            self.assertEqual(
-                course_overview.image_urls,
-                {
-                    'raw': expected_url,
-                    'small': expected_url,
-                    'large': expected_url,
-                }
-            )
-            return course_overview
-
+    @override_settings(DEFAULT_COURSE_ABOUT_IMAGE_URL='default_course.png')
+    @override_settings(STATIC_URL='static/')
     @ddt.data(
         *itertools.product(
             [ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split],
@@ -634,60 +612,106 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
 
     @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
     def test_error_generating_thumbnails(self, modulestore_type):
+        """
+        Test a scenario where thumbnails cannot be generated.
+
+        We need to make sure that:
+
+        a) We don't cause any 500s to leak out. A failure to generate thumbnails
+           should never cause CourseOverview generation to fail.
+        b) We return the raw course image for all resolutions.
+        c) We don't kill our CPU by trying over and over again.
+        """
+        with mock.patch('openedx.core.lib.courses.create_course_image_thumbnail') as patched_create_thumbnail:
+            # Strictly speaking, this would fail anyway because there's no data
+            # backing sample_image.png, but we're going to make the side-effect
+            # more dramatic. ;-)
+            fake_course_image = 'sample_image.png'
+            patched_create_thumbnail.side_effect = Exception("Kaboom!")
+
+            # This will generate a CourseOverview, everything should default to
+            course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
+
+            # Make sure we were called (we tried to create the thumbnail)
+            patched_create_thumbnail.assert_called()
+
+        # Now an image set does exist, even if it has blank values for the
+        # small and large urls.
+        self.assertTrue(hasattr(course_overview, 'image_set'))
+        self.assertEqual(course_overview.image_set.small_url, '')
+        self.assertEqual(course_overview.image_set.large_url, '')
+
+        # The next time we create a CourseOverview, the images are explicitly
+        # *not* regenerated.
+        with mock.patch('openedx.core.lib.courses.create_course_image_thumbnail') as patched_create_thumbnail:
+            course_overview = CourseOverview.get_from_id(course_overview.id)
+            patched_create_thumbnail.assert_not_called()
 
 
-        # Disable model generation using config models...
-        CourseOverviewImageConfig.objects.all().delete()
-        CourseOverviewImageConfig.objects.create(enabled=False)
+    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
+    def test_happy_path(self, modulestore_type):
+        """What happens when everything works like we expect it to."""
+        # Create a real (oversized) image...
+        image = Image.new("RGB", (800, 400), "blue")
+        image_buff = StringIO()
+        image.save(image_buff, format="PNG")
+        image_buff.seek(0)
+        image_name = "big_course_image.png"
 
-        # Since we're disabled, we should just return the raw source image back
-        # for every resolution in image_urls.
-        fake_course_image = 'sample_image.png'
-        course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
+        with self.store.default_store(modulestore_type):
+            course = CourseFactory.create(
+                default_store=modulestore_type, course_image=image_name
+            )
 
-        # Because we are disabled, no image set should have been generated.
-        self.assertFalse(hasattr(course_overview, 'image_set'))
+            # Save a real image here...
+            course_image_asset_key = StaticContent.compute_location(course.id, course.course_image)
+            course_image_content = StaticContent(course_image_asset_key, image_name, 'image/png', image_buff)
+            contentstore().save(course_image_content)
+
+            # Now generate the CourseOverview...
+            course_overview = CourseOverview.get_from_id(course.id)
+            image_urls = course_overview.image_urls
+            config = CourseOverviewImageConfig.current()
+
+            # Make sure the thumbnail names come out as expected...
+            self.assertTrue(image_urls['raw'].endswith('big_course_image.png'))
+            self.assertTrue(image_urls['small'].endswith('big_course_image-png-{}x{}.jpg'.format(*config.small)))
+            self.assertTrue(image_urls['large'].endswith('big_course_image-png-{}x{}.jpg'.format(*config.large)))
+
+            # Now make sure our thumbnails are of the sizes we expect...
+            for image_url, expected_size in [(image_urls['small'], config.small), (image_urls['large'], config.large)]:
+                image_key = StaticContent.get_location_from_path(image_url)
+                image_content = AssetManager.find(image_key)
+                image = Image.open(StringIO(image_content.data))
+                self.assertEqual(image.size, expected_size)
 
 
-#    @ddt.data(
-#        *itertools.product(
-#            [ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split],
-#            [
-#                'does_not_exist',  # just a garbage value
-#                'https://www.edx.org/sites/default/files/theme/edx-logo-header.png',  # a full URL
-#            ]
-#        )
-#    )
-#    def test_thumbnail_generation_error(self, moduelstore_type):
-#        """Test a scenario where thumbnails cannot be generated.
-#
-#        We need to make sure that:
-#
-#        a) We don't cause any 500s to leak out. A failure to generate thumbnails
-#           should never cause CourseOverview generation to fail.
-#        b) We return the raw course image for all resolutions.
-#        c) We don't kill our CPU by trying over and over again.
-#        """
-#        # This is an absolute URL, not a reference to something in our content
-#        # store, so thumbnail creation will fail.
-#        fake_course_image_url = "https://www.edx.org/sites/default/files/theme/edx-logo-header.png"
-#        with self.store.default_store(modulestore_type):
-#            course = CourseFactory.create(
-#                default_store=modulestore_type,
-#                course_image=fake_course_image_url
-#            )
-#            course_overview = CourseOverview.get_from_id(course.id)
-#            self.assertTrue(hasattr(course_overview, 'image_set'))
-#            self.assertEqual(
-#                course_overview.image_urls,
-#                {
-#                    'raw': fallback_url,
-#                    'small': fallback_url,
-#                    'large': fallback_url,
-#                }
-#            )
-#            # Check that the CourseOverviewImageSet thumbnail generation call happened.
-#
-#
-#    def test_respects_config(self):
-#        pass
+    def _assert_image_url_values(self, modulestore_type, raw_course_image_name, expected_url=None):
+        """
+        Helper function for asserting the values that come out of CourseOverview.image_urls.
+
+        Returns the CourseOverview created. This function is useful when you
+        know that the thumbnail generation process is going to fail in some way
+        (e.g. unspecified source image, disabled config, runtime error) and want
+        to verify that all the image URLs are a certain expected value (either
+        the source image, or the fallback URL).
+        """
+        with self.store.default_store(modulestore_type):
+            course = CourseFactory.create(
+                default_store=modulestore_type, course_image=raw_course_image_name
+            )
+            if expected_url is None:
+                expected_url = course_image_url(course)
+
+            course_overview = CourseOverview.get_from_id(course.id)
+
+            # All the URLs that come back should be for the expected_url
+            self.assertEqual(
+                course_overview.image_urls,
+                {
+                    'raw': expected_url,
+                    'small': expected_url,
+                    'large': expected_url,
+                }
+            )
+            return course_overview
