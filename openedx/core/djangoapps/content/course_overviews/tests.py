@@ -598,8 +598,7 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         course_overview_before.image_set.save()
 
         # Now disable the thumbnail feature
-        CourseOverviewImageConfig.objects.all().delete()
-        CourseOverviewImageConfig.objects.create(enabled=False)
+        self.set_config(False)
 
         # Fetch a new CourseOverview
         course_overview_after = CourseOverview.get_from_id(course.id)
@@ -641,14 +640,15 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
             fake_course_image = 'sample_image.png'
             patched_create_thumbnail.side_effect = Exception("Kaboom!")
 
-            # This will generate a CourseOverview, everything should default to
+            # This will generate a CourseOverview and verify that we get the
+            # source image back for all resolutions.
             course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
 
-            # Make sure we were called (we tried to create the thumbnail)
+            # Make sure we were called (i.e. we tried to create the thumbnail)
             patched_create_thumbnail.assert_called()
 
-        # Now an image set does exist, even if it has blank values for the
-        # small and large urls.
+        # Now an image set does exist, even though it only has blank values for
+        # the small and large urls.
         self.assertTrue(hasattr(course_overview, 'image_set'))
         self.assertEqual(course_overview.image_set.small_url, '')
         self.assertEqual(course_overview.image_set.large_url, '')

@@ -590,7 +590,7 @@ class CourseOverviewImageSet(TimeStampedModel):
 
     1. Center cropping the image before scaling.
 
-       This is desirable, but it involves a few edge cases (what the rounding)
+       This is desirable, but it involves a few edge cases (what the rounding
        policy is, what to do with undersized images, etc.) The behavior that
        we implemented is at least no worse than what was already there in terms
        of distorting images.
