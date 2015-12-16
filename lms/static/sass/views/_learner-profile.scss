@@ -321,6 +321,10 @@
         @extend %pagination;
     }
 
+    .toggle-container {
+        @extend %toggle-container;
+    }
+
     .badge-set-display {
         @extend .container;
         padding: 0 0;
@@ -377,54 +381,6 @@
         .badge-placeholder {
             background-color: $gray-l7;
             box-shadow: inset 0 0 4px 0 $gray-l4;
-        }
-    }
-    .toggle-container {
-        padding: .5em 0;
-    }
-    .toggle-menu {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        text-indent: 0;
-        border-bottom: .25rem solid $gray-l4;
-        @include clearfix();
-
-        .toggle-switch {
-            @include float(left);
-            position: relative;
-            bottom: -(spacing-vertical(xx-small));
-            margin-bottom: -.25rem;
-            button.toggle-button {
-                @extend %t-copy-base;
-                display: block;
-                margin: 0;
-                border: 0 solid $transparent;
-                border-bottom-width: .25rem;
-                border-radius: 0;
-                font-weight: normal;
-                background: $transparent;
-                padding-bottom: ($baseline*.75);
-                color: $blue-s1;
-
-                &:hover,
-                &:focus {
-                    border-bottom-color: $blue-s1;
-                    color: $blue-s1;
-                    box-shadow: none;
-                    outline: none;
-                }
-                &:active {
-                    background: transparent;
-                    box-shadow: none;
-                    outline: none;
-                }
-                &.is-active {
-                    @extend %t-strong;
-                    border-bottom-color: $blue-s1;
-                    color: $black;
-                }
-            }
         }
     }
 }

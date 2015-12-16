@@ -34,7 +34,7 @@
                     ownProfile: this.options.ownProfile,
                     showFullProfile: this.showFullProfile()
                 }));
-                if (this.options.accountSettingsModel.get('accomplishments_shared')) {
+                if (this.showFullProfile() && (this.options.accountSettingsModel.get('accomplishments_shared'))) {
                     var self = this;
                     this.options.badgeListContainer.collection.fetch().done(function() {
                         var badges = self.options.badgeListContainer.render().$el;

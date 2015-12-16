@@ -268,7 +268,6 @@ def _visible_fields(user_profile, user, configuration=None):
         configuration = settings.ACCOUNT_VISIBILITY_CONFIGURATION
 
     profile_visibility = get_profile_visibility(user_profile, user, configuration)
-
     if profile_visibility == ALL_USERS_VISIBILITY:
         return configuration.get('shareable_fields')
     else:

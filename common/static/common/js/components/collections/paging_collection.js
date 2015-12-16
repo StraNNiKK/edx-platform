@@ -21,6 +21,7 @@
     define(['backbone.paginator'], function (BackbonePaginator) {
         var PagingCollection = BackbonePaginator.requestPager.extend({
             initialize: function () {
+                var self = this;
                 // These must be initialized in the constructor because otherwise all PagingCollections would point
                 // to the same object references for sortableFields and filterableFields.
                 this.sortableFields = {};
@@ -28,10 +29,9 @@
 
                 this.paginator_core = {
                     type: 'GET',
-                        dataType: 'json',
-                        url: function () { return this.url; }
+                    dataType: 'json',
+                    url: function () { return this.url; }
                 };
-                var self = this;
                 this.paginator_ui = {
                     firstPage: function () { return self.isZeroIndexed ? 0 : 1; },
                     // Specifies the initial page during collection initialization
@@ -49,7 +49,6 @@
                 };
             },
 
-            self: this,
             isZeroIndexed: false,
             perPage: 10,
 

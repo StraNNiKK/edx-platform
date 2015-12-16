@@ -25,9 +25,11 @@
             },
 
             renderCollection: function() {
-                // Render every item in the collection.
-                // This should push each rendered item to this.itemViews
-                // to ensure garbage collection works.
+                /**
+                 * Render every item in the collection.
+                 * This should push each rendered item to this.itemViews
+                 * to ensure garbage collection works.
+                 */
                 this.collection.each(function (model) {
                     var itemView = new this.itemViewClass({model: model});
                     this.$el.append(itemView.render().el);

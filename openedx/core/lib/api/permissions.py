@@ -104,8 +104,8 @@ def is_field_shared_factory(field_name):
             if request.user.is_staff:
                 return True
             # This should never return Multiple, as we don't allow case name collisions on registration.
-            user = get_object_or_404(User, username__icase=url_username)
-            if field_name in visible_fields(user.profile, request.user):
+            user = get_object_or_404(User, username__iexact=url_username)
+            if field_name in visible_fields(user.profile, user):
                 return True
             raise Http404()
 

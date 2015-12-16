@@ -15,7 +15,7 @@
                 text: gettext('All teams')
             },
 
-            paginationLabel: gettext('Teams pagination'),
+            paginationLabel: gettext('Teams Pagination'),
 
             initialize: function (options) {
                 this.context = options.context;

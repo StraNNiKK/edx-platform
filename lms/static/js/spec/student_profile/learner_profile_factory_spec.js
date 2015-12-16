@@ -69,9 +69,25 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 requests = AjaxHelpers.requests(this);
 
                 var context = createProfilePage(true, {accomplishments_shared: false}),
-                    modeToggleView = context.learnerProfileView.modeToggleView;
+                    modeToggleView = context.learnerProfileView.modeToggleView,
+                    badgeListContainer = context.badgeListContainer,
+                    learnerProfileView = context.learnerProfileView;
 
                 LearnerProfileHelpers.expectModeToggleToBeHidden(requests, modeToggleView);
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
+            });
+
+            it("doesn't show the mode toggle if badges fail to fetch", function() {
+
+                requests = AjaxHelpers.requests(this);
+
+                var context = createProfilePage(true, {accomplishments_shared: false}),
+                    modeToggleView = context.learnerProfileView.modeToggleView,
+                    badgeListContainer = context.badgeListContainer,
+                    learnerProfileView = context.learnerProfileView;
+
+                LearnerProfileHelpers.expectModeToggleToBeHidden(requests, modeToggleView);
+                LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
             });
 
             it("renders the mode toggle if there are badges", function() {
@@ -81,7 +97,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 var context = createProfilePage(true, {accomplishments_shared: true}),
                     modeToggleView = context.learnerProfileView.modeToggleView;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
 
                 LearnerProfileHelpers.expectModeToggleToBeShown(modeToggleView);
@@ -94,7 +111,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                 var context = createProfilePage(true, {accomplishments_shared: true}),
                     modeToggleView = context.learnerProfileView.modeToggleView;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.emptyBadges);
 
                 LearnerProfileHelpers.expectModeToggleToBeShown(modeToggleView);
@@ -109,7 +127,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.secondPageBadges);
 
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
@@ -128,7 +147,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.thirdPageBadges);
 
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
@@ -147,7 +167,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.emptyBadges);
 
                 LearnerProfileHelpers.expectBadgesHidden(badgeListContainer, learnerProfileView);
@@ -165,7 +186,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
 
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
@@ -181,7 +203,8 @@ define(['backbone', 'jquery', 'underscore', 'common/js/spec_helpers/ajax_helpers
                     modeToggleView = learnerProfileView.modeToggleView,
                     badgeListContainer = context.badgeListContainer;
 
-                requests.currentIndex = 1;
+                AjaxHelpers.expectRequest(requests, 'POST', '/event');
+                AjaxHelpers.respondWithError(requests, 404);
                 AjaxHelpers.respondWithJson(requests, LearnerProfileHelpers.firstPageBadges);
 
                 modeToggleView.$el.find('[data-section=".badge-set-display"]').click();
