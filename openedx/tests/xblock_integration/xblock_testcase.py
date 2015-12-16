@@ -15,37 +15,23 @@ from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 
 from lms.djangoapps.courseware.tests.helpers import LoginEnrollmentTestCase
-from lms.djangoapps.courseware.tests.factories import GlobalStaffFactory
 
-from student.roles import GlobalStaff
+import lms.djangoapps.lms_xblock.runtime
 
 
 class XBlockEventTestMixin(object):
-    """Mixin for easily verifying that events were emitted during a
-    test. This code should not be reused outside of DoneXBlock and
-    RateXBlock until we are much more comfortable with it. The
-    preferred way to do this type of testing elsewhere in the platform
-    is with the EventTestMixin defined in:
-      common/djangoapps/util/testing.py
-
-    For now, we are exploring how to build a test framework for
-    XBlocks. This is production-quality code for use in one XBlock,
-    but prototype-grade code for use generically. Once we have figured
-    out what we're doing, hopefully in a few weeks, this should evolve
-    become part of the generic XBlock testing framework
-    (https://github.com/edx/edx-platform/pull/10831). I would like
-    to build up a little bit of experience with it first in contexts
-    like this one before abstracting it out.
+    """Mixin for easily verifying that events were published during a
+    test.
 
     To do:
     * Evaluate patching runtime.emit instead of log_event
     * Evaluate using @mulby's event compare library
 
-    By design, we capture all events. We provide two functions:
-    1. assert_no_events_were_emitted verifies that no events of a
-       given search specification were emitted.
-    2. assert_event_emitted verifies that an event of a given search
-        specification was emitted.
+    By design, we capture all published events. We provide two functions:
+    1. assert_no_events_published verifies that no events of a
+       given search specification were published.
+    2. assert_event_published verifies that an event of a given search
+        specification was published.
 
     The Mongo/bok_choy event tests in cohorts have nice examplars for
     how such functionality might look.
@@ -58,31 +44,48 @@ class XBlockEventTestMixin(object):
     work in this context. We would also like to provide access to
     events for downstream consumers.
 
-    There is a nice event test in bok_choy, but it has performance
-    issues if used outside of acceptance testing (since it needs to
-    spin up a browser).  There is also util.testing.EventTestMixin,
-    but this is not very useful out-of-the-box.
-
+    Good things to look at as developing the code:
+    * Gabe's library for parsing events. This is nice.
+    * Bok choy has a nice Mongo search for events in the cohorts test
+      case. It is a little slow for the general case.
+    * This is originally based on a cleanup of the EventTestMixin. We
+      could work to converge those in some sensible way.
     """
     def setUp(self):
         """
-        We patch log_event to capture all events sent during the test.
+        We patch runtime.publish to capture all XBlock events sent during the test.
+
+        This is a little bit ugly -- it's all dynamic -- so we patch __init__ for the
+        system runtime to capture the dynamically-created publish, and catch whatever
+        is being passed into it.
         """
-        def log_event(event):
+        saved_init = lms.djangoapps.lms_xblock.runtime.LmsModuleSystem.__init__
+
+        def patched_init(runtime_self, **kwargs):
             """
-            A patch of log_event that just stores the event in the events list
+            Swap out publish in the __init__
             """
-            self.events.append(event)
+            old_publish = kwargs["publish"]
+
+            def publish(block, event_type, event):
+                """
+                Log the event, and call the original publish
+                """
+                self.events.append({"event": event, "event_type": event_type})
+                old_publish(block, event_type, event)
+            kwargs['publish'] = publish
+            return saved_init(runtime_self, **kwargs)
 
         super(XBlockEventTestMixin, self).setUp()
         self.events = []
-        patcher = mock.patch("track.views.log_event", log_event)
+        #patcher = mock.patch("track.views.log_event", log_event)
+        patcher = mock.patch("lms.djangoapps.lms_xblock.runtime.LmsModuleSystem.__init__", patched_init)
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def assert_no_events_were_emitted(self, event_type):
+    def assert_no_events_published(self, event_type):
         """
-        Ensures no events of a given type were emitted since the last event related assertion.
+        Ensures no events of a given type were published since the last event related assertion.
 
         We are relatively specific since things like implicit HTTP
         events almost always do get omitted, and new event types get
@@ -91,9 +94,9 @@ class XBlockEventTestMixin(object):
         for event in self.events:
             self.assertNotEqual(event['event_type'], event_type)
 
-    def assert_event_emitted(self, event_type, event_fields=None):
+    def assert_event_published(self, event_type, event_fields=None):
         """
-        Verify that an event was emitted with the given parameters.
+        Verify that an event was published with the given parameters.
 
         We can verify that specific event fields are set using the
         optional search parameter.
@@ -112,16 +115,16 @@ class XBlockEventTestMixin(object):
                     return
         self.assertIn({'event_type': event_type, 'event': event_fields}, self.events)
 
-    def reset_event_tracker(self):
+    def reset_published_events(self):
         """
         Reset the mock tracker in order to forget about old events.
         """
         self.events = []
 
 
-class GradeEmissionTestMixin(object):
+class GradePublishTestMixin(object):
     '''
-    This checks whether a grading event was correctly emitted. This puts basic
+    This checks whether a grading event was correctly published. This puts basic
     plumbing in place, but we would like to:
     * Add search parameters. Is it for the right block? The right user? This
       only handles the case of one block/one user right now.
@@ -149,7 +152,7 @@ class GradeEmissionTestMixin(object):
                                 'score': score,
                                 'max_score': max_score})
 
-        super(GradeEmissionTestMixin, self).setUp()
+        super(GradePublishTestMixin, self).setUp()
 
         self.scores = []
         patcher = mock.patch("courseware.module_render.set_score", capture_score)
@@ -185,12 +188,12 @@ class XBlockScenarioTestCaseMixin(object):
             for chapter_config in cls.test_configuration:
                 chapter = ItemFactory.create(
                     parent=cls.course,
-                    display_name="ch_"+chapter_config['urlname'],
+                    display_name="ch_" + chapter_config['urlname'],
                     category='chapter'
                 )
                 section = ItemFactory.create(
                     parent=chapter,
-                    display_name="sec_"+chapter_config['urlname'],
+                    display_name="sec_" + chapter_config['urlname'],
                     category='sequential'
                 )
                 unit = ItemFactory.create(
@@ -199,7 +202,7 @@ class XBlockScenarioTestCaseMixin(object):
                     category='vertical'
                 )
                 for xblock_config in chapter_config['xblocks']:
-                    xblock1 = ItemFactory.create(
+                    ItemFactory.create(
                         parent=unit,
                         category=xblock_config['blocktype'],
                         display_name=xblock_config['urlname']
@@ -209,8 +212,8 @@ class XBlockScenarioTestCaseMixin(object):
                     'courseware_section',
                     kwargs={
                         'course_id': unicode(cls.course.id),
-                        'chapter': "ch_"+chapter_config['urlname'],
-                        'section': "sec_"+chapter_config['urlname']
+                        'chapter': "ch_" + chapter_config['urlname'],
+                        'section': "sec_" + chapter_config['urlname']
                     }
                 ))
 
@@ -242,6 +245,9 @@ class XBlockStudentTestCaseMixin(object):
         self.select_student(0)
 
     def _enroll_user(self, username, email, password):
+        '''
+        Create and activate a user account.
+        '''
         self.create_account(username, email, password)
         self.activate_user(email)
 
@@ -255,7 +261,7 @@ class XBlockStudentTestCaseMixin(object):
             email = "user_{i}@example.edx.org".format(i=user_id)
             password = "12345"
             self._enroll_user(username, email, password)
-            self.student_list.append({'email':email,'password':password})
+            self.student_list.append({'email': email, 'password': password})
 
         email = self.student_list[user_id]['email']
         password = self.student_list[user_id]['password']
@@ -268,15 +274,20 @@ class XBlockStudentTestCaseMixin(object):
 class XBlockTestCase(XBlockStudentTestCaseMixin,
                      XBlockScenarioTestCaseMixin,
                      XBlockEventTestMixin,
-                     GradeEmissionTestMixin,
+                     GradePublishTestMixin,
                      SharedModuleStoreTestCase,
                      LoginEnrollmentTestCase):
+    """
+    Class for all XBlock-internal test cases (as opposed to integration tests).
+    """
+    test_configuration = None  # Children must override this!
+
     @classmethod
     def setUpClass(cls):
         '''
         Unless overridden, we create two student users and one staff
         user. We create the course hierarchy based on the OLX defined
-        in the XBlock test class. Until we can deal with OLX, that 
+        in the XBlock test class. Until we can deal with OLX, that
         actually will come from a list.
         '''
         # Nose runs setUpClass methods even if a class decorator says to skip
@@ -286,9 +297,6 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
             raise unittest.SkipTest('Test only valid in lms')
 
         super(XBlockTestCase, cls).setUpClass()
-
-    def setup(self):
-        super(XBlockTestCase, self).setUp()
 
     def get_handler_url(self, handler, xblock_name=None):
         """
@@ -309,7 +317,7 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
         url = self._get_handler_url(function, block_urlname)
         resp = self.client.post(url, json.dumps(json_data), '')
         ajax_response = collections.namedtuple('AjaxResponse',
-                                   ['data', 'status_code'])
+                                               ['data', 'status_code'])
         ajax_response.data = json.loads(resp.content)
         ajax_response.status_code = resp.status_code
         return ajax_response
@@ -341,11 +349,12 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
         We should include data, but with a selector dropping
         the rest of the HTML around the block.
 
-        TODO: IMPLEMENT.
+        To do: Implement returning the XBlock's HTML. This is an XML
+        selector on the returned response for that div.
         '''
         section = self._containing_section(block_urlname)
         html_response = collections.namedtuple('HtmlResponse',
-                                   ['status_code'])
+                                               ['status_code'])
         url = self.scenario_urls[section]
         response = self.client.get(url)
         html_response.status_code = response.status_code
@@ -360,7 +369,7 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
             for block in blocks:
                 if block['urlname'] == block_urlname:
                     return section['urlname']
-        raise Exception("Block not found "+block_urlname)
+        raise Exception("Block not found " + block_urlname)
 
     def assertXBlockScreenshot(self, block_urlname, rendering=None):
         '''
@@ -371,6 +380,6 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
         This confirms status code, and that the screenshot is
         identical.
 
-        TODO: IMPLEMENT
+        To do: Implement
         '''
-        pass
+        raise NotImplementedError("We need Ben's help to finish this")

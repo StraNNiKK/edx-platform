@@ -1,22 +1,11 @@
-# '''
-# This is a simple XBlock test case.
-# '''
-# 
+'''
+This is a simple XBlock test case.
+'''
+
+from openedx.tests.xblock_integration.xblock_testcase import XBlockTestCase
 
 
-import json
-from django.core.urlresolvers import reverse
-
-from xblock_testcase import XBlockTestCase
-
-olx = {  # Currently not used
-    "two_done_block_test_case":  """<vertical>
-        <done urlname="done0"/>
-        <done urlname="done1"/>
-     </vertical>"""
-}
-
-
+# pylint: disable=abstract-method
 class TestDone(XBlockTestCase):
     """
     Simple tests for the completion XBlock. We set up a page with two
@@ -24,12 +13,19 @@ class TestDone(XBlockTestCase):
     make sure they've toggled, and reconfirm the page renders.
     """
 
-    ## This is a stop-gap until we can load OLX and/or OLX from
-    ## normal workbench scenarios
+    olx_scenarios = {  # Currently not used
+        "two_done_block_test_case": """<vertical>
+          <done urlname="done0"/>
+          <done urlname="done1"/>
+        </vertical>"""
+    }
+
+    # This is a stop-gap until we can load OLX and/or OLX from
+    # normal workbench scenarios
     test_configuration = [
         {
             "urlname": "two_done_block_test_case",
-            "olx": olx,
+            "olx": olx_scenarios[0],
             "xblocks": [  # Stopgap until we handle OLX
                 {
                     'blocktype': 'done',
@@ -50,12 +46,20 @@ class TestDone(XBlockTestCase):
         """
         resp = self.ajax('toggle_button', block, data)
         self.assertEqual(resp.status_code, 200)
+        # pylint: disable=no-member
         self.assertEqual(resp.data, {"state": desired_state})
 
+    # pylint: disable=unused-argument
     def check_response(self, block_urlname, rendering):
+        """
+        Confirm that we have a 200 response code (no server error)
+
+        In the future, visual diff test the response.
+        """
         response = self.render_block(block_urlname)
         self.assertEqual(response.status_code, 200)
-        self.assertXBlockScreenshot(block_urlname, rendering)
+        # To do: Below method needs to be implemented
+        #self.assertXBlockScreenshot(block_urlname, rendering)
 
     def test_done(self):
         """
@@ -69,17 +73,17 @@ class TestDone(XBlockTestCase):
 
         # We confirm the block is initially false
         self.toggle_button('done_0', {}, False)
-        self.reset_event_tracker()
+        self.reset_published_events()
         self.toggle_button('done_1', {}, False)
-        self.assert_no_events_were_emitted("edx.done.toggled")
+        self.assert_no_events_published("edx.done.toggled")
 
         # We confirm we can toggle state both ways
-        self.reset_event_tracker()
+        self.reset_published_events()
         self.toggle_button('done_0', {'done': True}, True)
-        self.assert_event_emitted('edx.done.toggled', event_fields={"done": True})
-        self.reset_event_tracker()
+        self.assert_event_published('edx.done.toggled', event_fields={"done": True})
+        self.reset_published_events()
         self.toggle_button('done_1', {'done': False}, False)
-        self.assert_event_emitted('edx.done.toggled', event_fields={"done": False})
+        self.assert_event_published('edx.done.toggled', event_fields={"done": False})
         self.toggle_button('done_0', {'done': False}, False)
         self.assert_grade(0)
         self.toggle_button('done_1', {'done': True}, True)
