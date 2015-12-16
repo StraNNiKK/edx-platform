@@ -6,11 +6,11 @@ from opaque_keys.edx.keys import CourseKey
 from rest_framework import generics
 from rest_framework.exceptions import APIException
 
+from openedx.core.djangoapps.user_api.permissions import is_field_shared_factory
 from openedx.core.lib.api.authentication import (
     OAuth2AuthenticationAllowInactiveUser,
     SessionAuthenticationAllowInactiveUser
 )
-from openedx.core.lib.api.permissions import is_field_shared_factory
 from badges.models import BadgeAssertion
 from .serializers import BadgeAssertionSerializer
 from xmodule_django.models import CourseKeyField
