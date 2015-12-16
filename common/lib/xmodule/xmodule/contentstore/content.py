@@ -48,7 +48,7 @@ class StaticContent(object):
         if not ext == XASSET_THUMBNAIL_TAIL_NAME:
             name_root = name_root + ext.replace(u'.', u'-')
             if dimensions:
-                width, height = dimensions  # pylint: unpacking-non-sequence
+                width, height = dimensions  # pylint: disable=unpacking-non-sequence
                 name_root += "-{}x{}".format(width, height)
 
         return u"{name_root}{extension}".format(
