@@ -387,7 +387,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/baseview',
             AbstractEditor.prototype.afterRender.call(this);
             this.$('input.time').timepicker({
                 'timeFormat' : 'H:i',
-                'minTime': '00:30   ',
+                'minTime': '00:30',
                 'maxTime': '23:30',
                 'show2400': true,
                 'forceRoundTime': false
