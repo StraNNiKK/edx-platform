@@ -39,7 +39,7 @@ class StaticContent(object):
         return self.location.category == 'thumbnail'
 
     @staticmethod
-    def generate_thumbnail_name(original_name, dimensions=None):
+    def generate_thumbnail_name(original_name, dimensions=()):
         """
         - original_name: Name of the asset (typically its location.name)
         - dimensions: `None` or a tuple of (width, height) in pixels
@@ -257,7 +257,20 @@ class ContentStore(object):
         """
         raise NotImplementedError
 
-    def generate_thumbnail(self, content, tempfile_path=None, dimensions=None):
+    def generate_thumbnail(self, content, tempfile_path=None, dimensions=(128, 128)):
+        """Create a thumbnail for a given image.
+
+        Returns a tuple of (StaticContent, AssetKey)
+
+        `content` is the StaticContent representing the image you want to make a
+        thumbnail out of.
+
+        `tempfile_path` is a string path to the location a file to read from to
+        grab the image data, instead of relying on `content.data`
+
+        `dimensions` is an optional param that represents (width, height) in
+        pixels. It defaults to (128, 128).
+        """
         thumbnail_content = None
         # use a naming convention to associate originals with the thumbnail
         thumbnail_name = StaticContent.generate_thumbnail_name(
@@ -283,9 +296,6 @@ class ContentStore(object):
                 # I've seen some exceptions from the PIL library when trying to save palletted
                 # PNG files to JPEG. Per the google-universe, they suggest converting to RGB first.
                 im = im.convert('RGB')
-                if not dimensions:
-                    dimensions = 128, 128
-
                 im.thumbnail(dimensions, Image.ANTIALIAS)
                 thumbnail_file = StringIO.StringIO()
                 im.save(thumbnail_file, 'JPEG')

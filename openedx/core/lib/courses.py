@@ -32,6 +32,7 @@ def course_image_url(course):
 
     return url
 
+
 def create_course_image_thumbnail(course, dimensions):
     """Create a course image thumbnail and return the URL.
 

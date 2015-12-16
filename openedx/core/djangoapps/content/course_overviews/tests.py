@@ -502,14 +502,27 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
 
     def setUp(self):
         """Create an active CourseOverviewImageConfig with non-default values."""
+        self.set_config(True)
+        super(CourseOverviewImageSetTestCase, self).setUp()
+
+    def set_config(self, enabled):
+        """
+        Enable or disable thumbnail generation config.
+
+        Config models pick the most recent by date created, descending. I delete
+        entries here because that can sometimes screw up on MySQL, which only
+        has second-level granularity in this timestamp.
+
+        This uses non-default values for the dimensions.
+        """
+        CourseOverviewImageConfig.objects.all().delete()
         CourseOverviewImageConfig.objects.create(
-            enabled=True,
+            enabled=enabled,
             small_width=200,
             small_height=100,
             large_width=400,
-            large_height=200,
+            large_height=200
         )
-        super(CourseOverviewImageSetTestCase, self).setUp()
 
     @override_settings(DEFAULT_COURSE_ABOUT_IMAGE_URL='default_course.png')
     @override_settings(STATIC_URL='static/')
@@ -542,8 +555,7 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         2. All resolutions should return the URL of the raw source image.
         """
         # Disable model generation using config models...
-        CourseOverviewImageConfig.objects.all().delete()
-        CourseOverviewImageConfig.objects.create(enabled=False)
+        self.set_config(enabled=False)
 
         # Since we're disabled, we should just return the raw source image back
         # for every resolution in image_urls.
@@ -647,10 +659,23 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
             course_overview = CourseOverview.get_from_id(course_overview.id)
             patched_create_thumbnail.assert_not_called()
 
+    @ddt.data(
+        *itertools.product(
+            [ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split],
+            [True, False]
+        )
+    )
+    @ddt.unpack
+    def test_happy_path(self, modulestore_type, create_after_overview):
+        """
+        What happens when everything works like we expect it to.
 
-    @ddt.data(ModuleStoreEnum.Type.mongo, ModuleStoreEnum.Type.split)
-    def test_happy_path(self, modulestore_type):
-        """What happens when everything works like we expect it to."""
+        If `create_after_overview` is True, we will temporarily disable
+        thumbnail creation so that the initial CourseOverview is created without
+        an image_set, and the CourseOverviewImageSet is created afterwards. If
+        `create_after_overview` is False, we'll create the CourseOverviewImageSet
+        at the same time as the CourseOverview.
+        """
         # Create a real (oversized) image...
         image = Image.new("RGB", (800, 400), "blue")
         image_buff = StringIO()
@@ -668,8 +693,24 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
             course_image_content = StaticContent(course_image_asset_key, image_name, 'image/png', image_buff)
             contentstore().save(course_image_content)
 
+            # If create_after_overview is True, disable thumbnail generation so
+            # that the CourseOverview object is created and saved without an
+            # image_set at first (it will be lazily created later).
+            if create_after_overview:
+                self.set_config(enabled=False)
+
             # Now generate the CourseOverview...
             course_overview = CourseOverview.get_from_id(course.id)
+
+            # If create_after_overview is True, no image_set exists yet. Verify
+            # that, then switch config back over to True and it should lazily
+            # create the image_set on the next get_from_id() call.
+            if create_after_overview:
+                self.assertFalse(hasattr(course_overview, 'image_set'))
+                self.set_config(enabled=True)
+                course_overview = CourseOverview.get_from_id(course.id)
+
+            self.assertTrue(hasattr(course_overview, 'image_set'))
             image_urls = course_overview.image_urls
             config = CourseOverviewImageConfig.current()
 
@@ -684,7 +725,6 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
                 image_content = AssetManager.find(image_key)
                 image = Image.open(StringIO(image_content.data))
                 self.assertEqual(image.size, expected_size)
-
 
     def _assert_image_url_values(self, modulestore_type, raw_course_image_name, expected_url=None):
         """

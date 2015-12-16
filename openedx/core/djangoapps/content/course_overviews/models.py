@@ -619,7 +619,7 @@ class CourseOverviewImageSet(TimeStampedModel):
 
         This will save the CourseOverviewImageSet it creates before it returns.
         """
-        from openedx.core.lib.courses import create_course_image_thumbnail, course_image_url
+        from openedx.core.lib.courses import create_course_image_thumbnail
 
         # If image thumbnails are not enabled, do nothing.
         config = CourseOverviewImageConfig.current()
@@ -637,11 +637,12 @@ class CourseOverviewImageSet(TimeStampedModel):
         if course.course_image:
             # Try to create a thumbnails of the course image. If this fails for any
             # reason (weird format, non-standard URL, etc.), the URLs will default
-            # to being blank.
+            # to being blank. No matter what happens, we don't want to bubble up
+            # a 500 -- an image_set is always optional.
             try:
                 image_set.small_url = create_course_image_thumbnail(course, config.small)
                 image_set.large_url = create_course_image_thumbnail(course, config.large)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "Could not create thumbnail for course %s with image %s",
                     course.id,
@@ -668,6 +669,11 @@ class CourseOverviewImageSet(TimeStampedModel):
             #          to unsaved related object 'course_overview'.")
             pass
 
+    def __unicode__(self):
+        return u"CourseOverviewImageSet({}, small_url={}, large_url={})".format(
+            self.course_overview_id, self.small_url, self.large_url
+        )
+
 
 class CourseOverviewImageConfig(ConfigurationModel):
     """
@@ -688,8 +694,15 @@ class CourseOverviewImageConfig(ConfigurationModel):
 
     @property
     def small(self):
+        """Tuple for small image dimensions in pixels -- (width, height)"""
         return (self.small_width, self.small_height)
 
     @property
     def large(self):
+        """Tuple for large image dimensions in pixels -- (width, height)"""
         return (self.large_width, self.large_height)
+
+    def __unicode__(self):
+        return u"CourseOverviewImageConfig(enabled={}, small={}, large={})".format(
+            self.enabled, self.small, self.large
+        )
