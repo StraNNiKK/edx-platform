@@ -1,25 +1,276 @@
-from collections import namedtuple
+"""
+This tests that the completion XBlock correctly stores state. This
+is a fairly simple XBlock, and a correspondingly simple test suite.
+"""
 
+import collections
+import json
+import mock
 import unittest
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
-from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 
 from lms.djangoapps.courseware.tests.helpers import LoginEnrollmentTestCase
+from lms.djangoapps.courseware.tests.factories import GlobalStaffFactory
+
 from student.roles import GlobalStaff
 
-class XBlockTestCase(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
-    STUDENTS = [
-        ('alice@sender.org', 'foo', False),
-        ('eve@listener.org', 'bar', False),
-        ('bob@receiver.org', 'baz', True),
+
+class XBlockEventTestMixin(object):
+    """Mixin for easily verifying that events were emitted during a
+    test. This code should not be reused outside of DoneXBlock and
+    RateXBlock until we are much more comfortable with it. The
+    preferred way to do this type of testing elsewhere in the platform
+    is with the EventTestMixin defined in:
+      common/djangoapps/util/testing.py
+
+    For now, we are exploring how to build a test framework for
+    XBlocks. This is production-quality code for use in one XBlock,
+    but prototype-grade code for use generically. Once we have figured
+    out what we're doing, hopefully in a few weeks, this should evolve
+    become part of the generic XBlock testing framework
+    (https://github.com/edx/edx-platform/pull/10831). I would like
+    to build up a little bit of experience with it first in contexts
+    like this one before abstracting it out.
+
+    To do:
+    * Evaluate patching runtime.emit instead of log_event
+    * Evaluate using @mulby's event compare library
+
+    By design, we capture all events. We provide two functions:
+    1. assert_no_events_were_emitted verifies that no events of a
+       given search specification were emitted.
+    2. assert_event_emitted verifies that an event of a given search
+        specification was emitted.
+
+    The Mongo/bok_choy event tests in cohorts have nice examplars for
+    how such functionality might look.
+
+    In the future, we would like to expand both search
+    specifications. This is built in the edX event tracking acceptance
+    tests, but is built on top of Mongo. We would also like to have
+    nice error messages. This is in the edX event tracking tests, but
+    would require a bit of work to tease out of the platform and make
+    work in this context. We would also like to provide access to
+    events for downstream consumers.
+
+    There is a nice event test in bok_choy, but it has performance
+    issues if used outside of acceptance testing (since it needs to
+    spin up a browser).  There is also util.testing.EventTestMixin,
+    but this is not very useful out-of-the-box.
+
+    """
+    def setUp(self):
+        """
+        We patch log_event to capture all events sent during the test.
+        """
+        def log_event(event):
+            """
+            A patch of log_event that just stores the event in the events list
+            """
+            self.events.append(event)
+
+        super(XBlockEventTestMixin, self).setUp()
+        self.events = []
+        patcher = mock.patch("track.views.log_event", log_event)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def assert_no_events_were_emitted(self, event_type):
+        """
+        Ensures no events of a given type were emitted since the last event related assertion.
+
+        We are relatively specific since things like implicit HTTP
+        events almost always do get omitted, and new event types get
+        added all the time. This is not useful without a filter.
+        """
+        for event in self.events:
+            self.assertNotEqual(event['event_type'], event_type)
+
+    def assert_event_emitted(self, event_type, event_fields=None):
+        """
+        Verify that an event was emitted with the given parameters.
+
+        We can verify that specific event fields are set using the
+        optional search parameter.
+        """
+        if not event_fields:
+            event_fields = {}
+        for event in self.events:
+            if event['event_type'] == event_type:
+                found = True
+                for field in event_fields:
+                    if field not in event['event']:
+                        found = False
+                    elif event_fields[field] != event['event'][field]:
+                        found = False
+                if found:
+                    return
+        self.assertIn({'event_type': event_type, 'event': event_fields}, self.events)
+
+    def reset_event_tracker(self):
+        """
+        Reset the mock tracker in order to forget about old events.
+        """
+        self.events = []
+
+
+class GradeEmissionTestMixin(object):
+    '''
+    This checks whether a grading event was correctly emitted. This puts basic
+    plumbing in place, but we would like to:
+    * Add search parameters. Is it for the right block? The right user? This
+      only handles the case of one block/one user right now.
+    * Check end-to-end. We would like to see grades in the database, not just
+      look for emission. Looking for emission may still be helpful if there
+      are multiple events in a test.
+
+    This is a bit of work since we need to do a lot of translation
+    between XBlock and edx-platform identifiers (e.g. url_name and
+    usage key).
+    '''
+    def setUp(self):
+        '''
+        Hot-patch the grading emission system to capture grading events.
+        '''
+        def capture_score(user_id, usage_key, score, max_score):
+            '''
+            Hot-patch which stores scores in a local array instead of the
+            database.
+
+            Note that to make this generic, we'd need to do both.
+            '''
+            self.scores.append({'student': user_id,
+                                'usage': usage_key,
+                                'score': score,
+                                'max_score': max_score})
+
+        super(GradeEmissionTestMixin, self).setUp()
+
+        self.scores = []
+        patcher = mock.patch("courseware.module_render.set_score", capture_score)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def assert_grade(self, grade):
+        '''
+        Confirm that the last grade set was equal to grade.
+
+        HACK: In the future, this should take a user ID and a block url_name.
+        '''
+        self.assertEqual(grade, self.scores[-1]['score'])
+
+
+class XBlockScenarioTestCaseMixin(object):
+    '''
+    This allows us to have test cases defined in JSON today, and in OLX
+    someday.
+    '''
+    @classmethod
+    def setUpClass(cls):
+        """
+        Create a page with two of the XBlock on it
+        """
+        super(XBlockScenarioTestCaseMixin, cls).setUpClass()
+
+        cls.course = CourseFactory.create(
+            display_name='XBlock_Test_Course'
+        )
+        cls.scenario_urls = {}
+        with cls.store.bulk_operations(cls.course.id, emit_signals=False):
+            for chapter_config in cls.test_configuration:
+                chapter = ItemFactory.create(
+                    parent=cls.course,
+                    display_name="ch_"+chapter_config['urlname'],
+                    category='chapter'
+                )
+                section = ItemFactory.create(
+                    parent=chapter,
+                    display_name="sec_"+chapter_config['urlname'],
+                    category='sequential'
+                )
+                unit = ItemFactory.create(
+                    parent=section,
+                    display_name='New Unit',
+                    category='vertical'
+                )
+                for xblock_config in chapter_config['xblocks']:
+                    xblock1 = ItemFactory.create(
+                        parent=unit,
+                        category=xblock_config['blocktype'],
+                        display_name=xblock_config['urlname']
+                    )
+
+                scenario_url = unicode(reverse(
+                    'courseware_section',
+                    kwargs={
+                        'course_id': unicode(cls.course.id),
+                        'chapter': "ch_"+chapter_config['urlname'],
+                        'section': "sec_"+chapter_config['urlname']
+                    }
+                ))
+
+                cls.scenario_urls[chapter_config['urlname']] = scenario_url
+
+
+class XBlockStudentTestCaseMixin(object):
+    '''
+    Creates a default set of students for XBlock tests
+    '''
+    student_list = [
+        {'email': 'alice@test.edx.org', 'password': 'foo'},
+        {'email': 'bob@test.edx.org', 'password': 'foo'},
+        {'email': 'eve@test.edx.org', 'password': 'foo'},
     ]
 
-    urls = {}
+    def setUp(self):
+        """
+        Create users accounts. The first three, we give helpful names to. If
+        there are any more, we auto-generate number IDs. We intentionally use
+        slightly different conventions for different users, so we exercise
+        more corner cases, but we could standardize if this is more hassle than
+        it's worth.
+        """
+        super(XBlockStudentTestCaseMixin, self).setUp()
+        for idx, student in enumerate(self.student_list):
+            username = "u{}".format(idx)
+            self._enroll_user(username, student['email'], student['password'])
+        self.select_student(0)
 
+    def _enroll_user(self, username, email, password):
+        self.create_account(username, email, password)
+        self.activate_user(email)
+
+    def select_student(self, user_id):
+        """
+        Select a current user account
+        """
+        # If we don't have enough users, add a few more...
+        for user_id in range(len(self.student_list), user_id):
+            username = "user_{i}".format(i=user_id)
+            email = "user_{i}@example.edx.org".format(i=user_id)
+            password = "12345"
+            self._enroll_user(username, email, password)
+            self.student_list.append({'email':email,'password':password})
+
+        email = self.student_list[user_id]['email']
+        password = self.student_list[user_id]['password']
+
+        # ... and log in as the appropriate user
+        self.login(email, password)
+        self.enroll(self.course, verify=True)
+
+
+class XBlockTestCase(XBlockStudentTestCaseMixin,
+                     XBlockScenarioTestCaseMixin,
+                     XBlockEventTestMixin,
+                     GradeEmissionTestMixin,
+                     SharedModuleStoreTestCase,
+                     LoginEnrollmentTestCase):
     @classmethod
     def setUpClass(cls):
         '''
@@ -36,82 +287,69 @@ class XBlockTestCase(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
 
         super(XBlockTestCase, cls).setUpClass()
 
-        cls.setupScenario()
-
     def setup(self):
         super(XBlockTestCase, self).setUp()
-        self.setupUsers()
 
-    def setupUsers(self):
-        for (email, password, staff) in self.STUDENTS:
-            self.login(email, password)
-            self.enroll(self.course, verify=True)
+    def get_handler_url(self, handler, xblock_name=None):
+        """
+        Get url for the specified xblock handler
+        """
+        return reverse('xblock_handler', kwargs={
+            'course_id': unicode(self.course.id),
+            'usage_id': unicode(self.course.id.make_usage_key('done', xblock_name)),
+            'handler': handler,
+            'suffix': ''
+        })
 
-    @classmethod
-    def setupScenario(cls):
-        cls.course = CourseFactory.create(
-            display_name='Test_Course'
-        )
+    def ajax(self, function, block_urlname, json_data):
+        '''
+        Call a json_handler in the XBlock. Return the response as
+        an object containing response code and JSON.
+        '''
+        url = self._get_handler_url(function, block_urlname)
+        resp = self.client.post(url, json.dumps(json_data), '')
+        ajax_response = collections.namedtuple('AjaxResponse',
+                                   ['data', 'status_code'])
+        ajax_response.data = json.loads(resp.content)
+        ajax_response.status_code = resp.status_code
+        return ajax_response
 
-        cls.chapter = ItemFactory.create(
-            parent=cls.course,
-            display_name='Overview',
-            category='chapter'
-        )
+    def _get_handler_url(self, handler, xblock_name=None):
+        """
+        Get url for the specified xblock handler
+        """
+        xblock_type = None
+        for scenario in self.test_configuration:
+            for block in scenario["xblocks"]:
+                if block["urlname"] == xblock_name:
+                    xblock_type = block["blocktype"]
 
-        cls.urls = {}
+        print "Type (should be 'done'):", xblock_type
+        key = unicode(self.course.id.make_usage_key(xblock_type, xblock_name))
+        print key
+        return reverse('xblock_handler', kwargs={
+            'course_id': unicode(self.course.id),
+            'usage_id': key,
+            'handler': handler,
+            'suffix': ''
+        })
 
-        with cls.store.bulk_operations(cls.course.id, emit_signals=False):
-            for section in cls.test_configuration:
-                section_item = ItemFactory.create(
-                    parent=cls.chapter,
-                    display_name=section['urlname'],
-                    category='sequential'
-                )
+    def render_block(self, block_urlname):
+        '''
+        Return a rendering of the XBlock.
 
-                cls.urls[section['urlname']] = reverse(
-                    'courseware_section',
-                    kwargs={
-                        'course_id': unicode(cls.course.id),
-                        'chapter': 'Overview',
-                        'section': section['urlname'],
-                    }
-                )
-                print section['urlname']
-                print cls.urls[section['urlname']]
+        We should include data, but with a selector dropping
+        the rest of the HTML around the block.
 
-                blocks = section["xblocks"]
-
-                unit_item = ItemFactory.create(
-                    parent=section_item,
-                    display_name="unit_"+section['urlname'],
-                    category='vertical'
-                )
-                for block in blocks:
-                    block_item = ItemFactory.create(
-                        parent=unit_item,
-                        category=block['blocktype'],
-                        display_name=block['urlname']
-                    )
-            cls.course_url = reverse(
-                'courseware_section',
-                kwargs={
-                    'course_id': unicode(cls.course.id),
-                    'chapter': 'Overview',
-                    'section': section['urlname'],
-                }
-            )
-            print cls.course_url
-
-            cls.course_url = reverse(
-                'courseware_section',
-                kwargs={
-                    'course_id': unicode(cls.course.id),
-                    'chapter': u'Overview',
-                    'section': u'two_done_block_test',
-                }
-            )
-            print cls.course_url
+        TODO: IMPLEMENT.
+        '''
+        section = self._containing_section(block_urlname)
+        html_response = collections.namedtuple('HtmlResponse',
+                                   ['status_code'])
+        url = self.scenario_urls[section]
+        response = self.client.get(url)
+        html_response.status_code = response.status_code
+        return html_response
 
     def _containing_section(self, block_urlname):
         '''
@@ -136,67 +374,3 @@ class XBlockTestCase(SharedModuleStoreTestCase, LoginEnrollmentTestCase):
         TODO: IMPLEMENT
         '''
         pass
-
-    def get_handler_url(self, handler, xblock_name=None):
-        """
-        Get url for the specified xblock handler
-        """
-        key = unicode(self.course.id.make_usage_key('done', xblock_name))
-        print key
-        return reverse('xblock_handler', kwargs={
-            'course_id': unicode(self.course.id),
-            'usage_id': key,
-            'handler': handler,
-            'suffix': ''
-        })
-
-    def ajax(self, function, block_urlname, json_data):
-        '''
-        Call a json_handler in the XBlock. Return the response as
-        an object containing response code and JSON.
-        '''
-        url = self.get_handler_url(function, block_urlname)
-        resp = self.client.post(url, json.dumps(data), '')
-        ajax_response = namedtuple('AjaxResponse',
-                                   ['data', 'status_code'])
-        ajax_response.data = json.loads(resp.content)
-        ajax_response.status_code = resp.status_code
-        return resp
-
-    def render_block(self, block_urlname):
-        '''
-        Return a rendering of the XBlock.
-
-        We should include data, but with a selector dropping
-        the rest of the HTML around the block.
-
-        TODO: IMPLEMENT.
-        '''
-        section = self._containing_section(block_urlname)
-        html_response = namedtuple('HtmlResponse',
-                                   ['status_code'])
-        #html_response.status_code = 200
-        #return html_response
-
-        url = self.urls[section]
-        print url
-        response = self.client.get(url)
-        http_response.status_code = response.status_code
-        return html_response
-
-    def select_student(self, user_number):
-        '''
-        Select a new user. By default, we're populated with two normal
-        users and one staff.
-
-        This is not finished. I'm not sure the best way to do
-        this. We'd like some kind of nicer parameter than a
-        number. Ideally, we'd take something semantically named
-        (student_0, staff_1, etc.) but iterable (for student in
-        students:).
-        '''
-        email = self.STUDENTS[user_number][0]
-        password = self.STUDENTS[user_number][1]
-        print email
-        print password
-        self.login(email, password)

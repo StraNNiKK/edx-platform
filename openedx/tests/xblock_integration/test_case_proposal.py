@@ -1,45 +1,56 @@
-'''
-This is a simple XBlock test case.
-'''
+# '''
+# This is a simple XBlock test case.
+# '''
+# 
+
+
+import json
+from django.core.urlresolvers import reverse
+
 from xblock_testcase import XBlockTestCase
 
-#from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase as XBlockTestCase
-
-olx = [
-    """<vertical>
-          <done urlname="done0"/>
-          <done urlname="done1"/>
-    </vertical>"""
-]
+olx = {  # Currently not used
+    "two_done_block_test_case":  """<vertical>
+        <done urlname="done0"/>
+        <done urlname="done1"/>
+     </vertical>"""
+}
 
 
 class TestDone(XBlockTestCase):
+    """
+    Simple tests for the completion XBlock. We set up a page with two
+    of the block, make sure the page renders, toggle them a few times,
+    make sure they've toggled, and reconfirm the page renders.
+    """
+
+    ## This is a stop-gap until we can load OLX and/or OLX from
+    ## normal workbench scenarios
     test_configuration = [
         {
-            "urlname": "two_done_block_test",
+            "urlname": "two_done_block_test_case",
             "olx": olx,
             "xblocks": [  # Stopgap until we handle OLX
                 {
                     'blocktype': 'done',
-                    'urlname': 'done0'
+                    'urlname': 'done_0'
                 },
                 {
                     'blocktype': 'done',
-                    'urlname': 'done1'
+                    'urlname': 'done_1'
                 }
             ]
         }
     ]
 
-    def check_ajax(self, block, data, desired_state):
+    def toggle_button(self, block, data, desired_state):
         """
         Make an AJAX call to the XBlock, and assert the state is as
         desired.
         """
-        response = self.ajax('toggle_button', block, data)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json, {"state": desired_state})
-        return response.data
+        resp = self.ajax('toggle_button', block, data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data, {"state": desired_state})
 
     def check_response(self, block_urlname, rendering):
         response = self.render_block(block_urlname)
@@ -47,22 +58,37 @@ class TestDone(XBlockTestCase):
         self.assertXBlockScreenshot(block_urlname, rendering)
 
     def test_done(self):
-        #self.select_student(0)
+        """
+        Walk through a few toggles. Make sure the blocks don't mix up
+        state between them, initial state is correct, and final state
+        is correct.
+        """
         # We confirm we don't have errors rendering the student view
-        self.check_response('done0', 'done-unmarked')
-        self.check_response('done1', 'done-unmarked')
+        self.check_response('done_0', 'done-unmarked')
+        self.check_response('done_1', 'done-unmarked')
+
         # We confirm the block is initially false
-        self.check_ajax('done0', {}, False)
-        self.check_ajax('done1', {}, False)
+        self.toggle_button('done_0', {}, False)
+        self.reset_event_tracker()
+        self.toggle_button('done_1', {}, False)
+        self.assert_no_events_were_emitted("edx.done.toggled")
+
         # We confirm we can toggle state both ways
-        self.check_ajax('done0', {'done': True}, True)
-        self.check_ajax('done1', {'done': False}, False)
-        self.check_ajax('done0', {'done': False}, False)
-        self.check_ajax('done1', {'done': True}, True)
+        self.reset_event_tracker()
+        self.toggle_button('done_0', {'done': True}, True)
+        self.assert_event_emitted('edx.done.toggled', event_fields={"done": True})
+        self.reset_event_tracker()
+        self.toggle_button('done_1', {'done': False}, False)
+        self.assert_event_emitted('edx.done.toggled', event_fields={"done": False})
+        self.toggle_button('done_0', {'done': False}, False)
+        self.assert_grade(0)
+        self.toggle_button('done_1', {'done': True}, True)
+        self.assert_grade(1)
+
         # We confirm state sticks around
-        self.check_ajax('done0', {}, False)
-        self.check_ajax('done1', {}, True)
-        # Reconfirm no errors rendering pages, either by status code
-        # or by screenshot
-        self.check_response('done0', 'done-unmarked')
-        self.check_response('done1', 'done-marked')
+        self.toggle_button('done_0', {}, False)
+        self.toggle_button('done_1', {}, True)
+
+        # And confirm we render correctly
+        self.check_response('done_0', 'done-unmarked')
+        self.check_response('done_1', 'done-marked')
