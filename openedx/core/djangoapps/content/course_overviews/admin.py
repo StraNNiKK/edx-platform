@@ -56,7 +56,8 @@ class CourseOverviewImageConfigAdmin(ConfigurationModelAdmin):
     ]
 
     def get_list_display(self, request):
-        """Restore default list_display behavior.
+        """
+        Restore default list_display behavior.
 
         ConfigurationModelAdmin overrides this, but in a way that doesn't
         respect the ordering. This lets us customize it the usual Django admin

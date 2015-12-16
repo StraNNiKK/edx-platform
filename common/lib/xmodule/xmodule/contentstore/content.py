@@ -53,7 +53,7 @@ class StaticContent(object):
 
         return u"{name_root}{extension}".format(
             name_root=name_root,
-            extension=XASSET_THUMBNAIL_TAIL_NAME
+            extension=XASSET_THUMBNAIL_TAIL_NAME,
         )
 
     @staticmethod
@@ -265,8 +265,8 @@ class ContentStore(object):
         `content` is the StaticContent representing the image you want to make a
         thumbnail out of.
 
-        `tempfile_path` is a string path to the location a file to read from to
-        grab the image data, instead of relying on `content.data`
+        `tempfile_path` is a string path to the location of a file to read from
+        in order to grab the image data, instead of relying on `content.data`
 
         `dimensions` is an optional param that represents (width, height) in
         pixels. It defaults to None.

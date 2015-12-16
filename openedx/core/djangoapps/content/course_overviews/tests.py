@@ -540,7 +540,7 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         # Because we're sending None and '', we expect to get the generic
         # fallback URL for course images.
         fallback_url = settings.STATIC_URL + settings.DEFAULT_COURSE_ABOUT_IMAGE_URL
-        course_overview = self._assert_image_url_values(modulestore_type, course_image, fallback_url)
+        course_overview = self._assert_image_urls_all_default(modulestore_type, course_image, fallback_url)
 
         # Even though there was no source image to generate, we should still
         # have a CourseOverviewImageSet object associated with this overview.
@@ -560,7 +560,7 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
         # Since we're disabled, we should just return the raw source image back
         # for every resolution in image_urls.
         fake_course_image = 'sample_image.png'
-        course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
+        course_overview = self._assert_image_urls_all_default(modulestore_type, fake_course_image)
 
         # Because we are disabled, no image set should have been generated.
         self.assertFalse(hasattr(course_overview, 'image_set'))
@@ -642,7 +642,7 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
 
             # This will generate a CourseOverview and verify that we get the
             # source image back for all resolutions.
-            course_overview = self._assert_image_url_values(modulestore_type, fake_course_image)
+            course_overview = self._assert_image_urls_all_default(modulestore_type, fake_course_image)
 
             # Make sure we were called (i.e. we tried to create the thumbnail)
             patched_create_thumbnail.assert_called()
@@ -726,9 +726,9 @@ class CourseOverviewImageSetTestCase(ModuleStoreTestCase):
                 image = Image.open(StringIO(image_content.data))
                 self.assertEqual(image.size, expected_size)
 
-    def _assert_image_url_values(self, modulestore_type, raw_course_image_name, expected_url=None):
+    def _assert_image_urls_all_default(self, modulestore_type, raw_course_image_name, expected_url=None):
         """
-        Helper function for asserting the values that come out of CourseOverview.image_urls.
+        Helper for asserting that all image_urls are defaulting to a particular value.
 
         Returns the CourseOverview created. This function is useful when you
         know that the thumbnail generation process is going to fail in some way

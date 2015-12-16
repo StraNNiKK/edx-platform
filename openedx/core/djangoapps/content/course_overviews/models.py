@@ -588,14 +588,20 @@ class CourseOverviewImageSet(TimeStampedModel):
 
     Logical next steps that I punted on for this first cut:
 
-    1. Center cropping the image before scaling.
+    1. Converting other parts of the app to use this.
+
+       Our first cut only affects About Pages and the Student Dashboard. But
+       most places that use course_image_url() should be converted -- e.g.
+       course discovery, mobile, etc.
+
+    2. Center cropping the image before scaling.
 
        This is desirable, but it involves a few edge cases (what the rounding
        policy is, what to do with undersized images, etc.) The behavior that
        we implemented is at least no worse than what was already there in terms
        of distorting images.
 
-    2. Automatically invalidating entries based on CourseOverviewImageConfig.
+    3. Automatically invalidating entries based on CourseOverviewImageConfig.
 
        There are two basic paths I can think of for this. The first is to
        completely wipe this table when the config changes. The second is to
@@ -644,9 +650,11 @@ class CourseOverviewImageSet(TimeStampedModel):
                 image_set.large_url = create_course_image_thumbnail(course, config.large)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
-                    "Could not create thumbnail for course %s with image %s",
+                    "Could not create thumbnail for course %s with image %s (small=%s), (large=%s)",
                     course.id,
-                    course.course_image
+                    course.course_image,
+                    config.small,
+                    config.large
                 )
 
         # Regardless of whether we created thumbnails or not, we need to save
