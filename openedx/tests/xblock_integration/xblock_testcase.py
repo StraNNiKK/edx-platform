@@ -135,6 +135,8 @@ class GradePublishTestMixin(object):
     This is a bit of work since we need to do a lot of translation
     between XBlock and edx-platform identifiers (e.g. url_name and
     usage key).
+
+    We could also use the runtime.publish logic above, now that we have it.
     '''
     def setUp(self):
         '''
