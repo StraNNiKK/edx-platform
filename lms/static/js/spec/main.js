@@ -10,7 +10,6 @@
             'jquery.flot': 'xmodule_js/common_static/js/vendor/flot/jquery.flot.min',
             'jquery.form': 'xmodule_js/common_static/js/vendor/jquery.form',
             'jquery.markitup': 'xmodule_js/common_static/js/vendor/markitup/jquery.markitup',
-            'jquery.leanModal': 'xmodule_js/common_static/js/vendor/jquery.leanModal.min',
             'jquery.ajaxQueue': 'xmodule_js/common_static/js/vendor/jquery.ajaxQueue',
             'jquery.smoothScroll': 'xmodule_js/common_static/js/vendor/jquery.smooth-scroll.min',
             'jquery.scrollTo': 'xmodule_js/common_static/js/vendor/jquery.scrollTo-1.4.2-min',
@@ -120,10 +119,6 @@
             'jquery.markitup': {
                 deps: ['jquery'],
                 exports: 'jQuery.fn.markitup'
-            },
-            'jquery.leanModal': {
-                deps: ['jquery'],
-                exports: 'jQuery.fn.leanModal'
             },
             'jquery.smoothScroll': {
                 deps: ['jquery'],
