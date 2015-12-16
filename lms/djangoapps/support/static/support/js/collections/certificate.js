@@ -7,14 +7,23 @@
 
                 initialize: function(options) {
                     this.userQuery = options.userQuery || '';
+                    this.courseID = options.courseID || '';
                 },
 
                 setUserQuery: function(userQuery) {
                     this.userQuery = userQuery;
                 },
 
+                setCourseQuery: function(courseQuery) {
+                    this.courseID = courseQuery;
+                },
+
                 url: function() {
-                    return '/certificates/search?query=' + this.userQuery;
+                    var url = '/certificates/search?user_query=' + this.userQuery;
+                    if (this.courseID) {
+                        url += '&course_id=' + encodeURIComponent(this.courseID);
+                    }
+                    return url;
                 }
             });
     });

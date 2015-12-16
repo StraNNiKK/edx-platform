@@ -18,7 +18,8 @@ define([
                 'type': 'honor',
                 'course_key': 'course-v1:edX+DemoX+Demo_Course',
                 'download_url': null,
-                'modified': '2015-08-06T19:47:07+00:00'
+                'modified': '2015-08-06T19:47:07+00:00',
+                'regenerate': true
             },
             {
                 'username': 'student',
@@ -28,8 +29,9 @@ define([
                 'type': 'verified',
                 'course_key': 'edx/test/2015',
                 'download_url': 'http://www.example.com/certificate.pdf',
-                'modified': '2015-08-06T19:47:05+00:00'
-            },
+                'modified': '2015-08-06T19:47:05+00:00',
+                'regenerate': true
+            }
         ],
 
         getSearchResults = function() {
@@ -55,7 +57,7 @@ define([
             view.triggerSearch();
 
             // Simulate a response from the server
-            AjaxHelpers.expectJsonRequest(requests, 'GET', '/certificates/search?query=student@example.com');
+            AjaxHelpers.expectJsonRequest(requests, 'GET', '/certificates/search?user_query=student@example.com');
             AjaxHelpers.respondWithJson(requests, response);
         },
 
@@ -129,7 +131,7 @@ define([
             }).render();
 
             // Simulate a response from the server
-            AjaxHelpers.expectJsonRequest(requests, 'GET', '/certificates/search?query=student@example.com');
+            AjaxHelpers.expectJsonRequest(requests, 'GET', '/certificates/search?user_query=student@example.com');
             AjaxHelpers.respondWithJson(requests, SEARCH_RESULTS);
 
             // Check the search results

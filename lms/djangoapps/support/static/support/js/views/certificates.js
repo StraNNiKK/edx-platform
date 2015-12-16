@@ -12,13 +12,15 @@
         return Backbone.View.extend({
             events: {
                 'submit .certificates-form': 'search',
-                'click .btn-cert-regenerate': 'regenerateCertificate'
+                'click .btn-cert-regenerate': 'regenerateCertificate',
+                'click .btn-cert-generate': 'generateCertificate'
             },
 
             initialize: function(options) {
                 _.bindAll(this, 'search', 'updateCertificates', 'regenerateCertificate', 'handleSearchError');
                 this.certificates = new CertCollection({});
                 this.initialQuery = options.userQuery || null;
+                this.courseID = options.courseID || null;
             },
 
             render: function() {
@@ -26,10 +28,11 @@
 
                 // If there is an initial query, then immediately trigger a search.
                 // This is useful because it allows users to share search results:
-                // if the URL contains ?query="foo" then anyone who loads that URL
+                // if the URL contains ?user_query="foo" then anyone who loads that URL
                 // will automatically search for "foo".
                 if (this.initialQuery) {
                     this.setUserQuery(this.initialQuery);
+                    this.setCourseQuery(this.course_id);
                     this.triggerSearch();
                 }
 
@@ -38,7 +41,7 @@
 
             renderResults: function() {
                 var context = {
-                    certificates: this.certificates,
+                    certificates: this.certificates
                 };
 
                 this.setResults(_.template(resultsTpl, context));
@@ -52,8 +55,12 @@
             search: function(event) {
 
                 // Fetch the certificate collection for the given user
-                var query = this.getUserQuery(),
-                    url = '/support/certificates?query=' + query;
+                var url = '/support/certificates?user_query=' + this.getUserQuery();
+
+                //course id is optional.
+                if (this.getCourseQuery()) {
+                    url += '&course_id=' + encodeURIComponent(this.getCourseQuery());
+                }
 
                 // Prevent form submission, since we're handling it ourselves.
                 event.preventDefault();
@@ -65,10 +72,37 @@
 
                 // Perform a search for the user's certificates.
                 this.disableButtons();
-                this.certificates.setUserQuery(query);
+                this.certificates.setUserQuery(this.getUserQuery());
+                this.certificates.setCourseQuery(this.getCourseQuery());
                 this.certificates.fetch({
                     success: this.updateCertificates,
                     error: this.handleSearchError
+                });
+            },
+
+
+            generateCertificate: function(event) {
+                var $button = $(event.target);
+
+                // Generate certificates for a particular user and course.
+                // If this is successful, reload the certificate results so they show
+                // the updated status.
+                this.disableButtons();
+                $.ajax({
+                    url: '/certificates/generate',
+                    type: 'POST',
+                    data: {
+                        username: $button.data('username'),
+                        course_key: $button.data('course-key')
+                    },
+                    context: this,
+                    success: function() {
+                        this.certificates.fetch({
+                            success: this.updateCertificates,
+                            error: this.handleSearchError
+                        });
+                    },
+                    error: this.handleGenerationsError
                 });
             },
 
@@ -84,16 +118,16 @@
                     type: 'POST',
                     data: {
                         username: $button.data('username'),
-                        course_key: $button.data('course-key'),
+                        course_key: $button.data('course-key')
                     },
                     context: this,
                     success: function() {
                         this.certificates.fetch({
                             success: this.updateCertificates,
-                            error: this.handleSearchError,
+                            error: this.handleSearchError
                         });
                     },
-                    error: this.handleRegenerateError
+                    error: this.handleGenerationsError
                 });
             },
 
@@ -102,12 +136,12 @@
                 this.enableButtons();
             },
 
-            handleSearchError: function(jqxhr) {
-                this.renderError(jqxhr.responseText);
+            handleSearchError: function(jqxhr, response) {
+                this.renderError(response.responseText);
                 this.enableButtons();
             },
 
-            handleRegenerateError: function(jqxhr) {
+            handleGenerationsError: function(jqxhr) {
                 // Since there are multiple "regenerate" buttons on the page,
                 // it's difficult to show the error message in the UI.
                 // Since this page is used only by internal staff, I think the
@@ -121,11 +155,19 @@
             },
 
             getUserQuery: function() {
-                return $('.certificates-form input[name="query"]').val();
+                return $('.certificates-form > #certificate-user-query-input').val();
             },
 
             setUserQuery: function(query) {
-                $('.certificates-form input[name="query"]').val(query);
+                $('.certificates-form > #certificate-user-query-input').val(query);
+            },
+
+            getCourseQuery: function() {
+                return $('.certificates-form > #certificate-course-query-input').val();
+            },
+
+            setCourseQuery: function(course_id) {
+                $('.certificates-form > #certificate-course-query-input').val(course_id);
             },
 
             setResults: function(html) {

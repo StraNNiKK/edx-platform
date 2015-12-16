@@ -9,7 +9,6 @@ import json
 import re
 
 import ddt
-from django.test import TestCase
 from django.core.urlresolvers import reverse
 from pytz import UTC
 
@@ -21,9 +20,10 @@ from student.roles import GlobalStaff, SupportStaffRole
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
+from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 
-class SupportViewTestCase(TestCase):
+class SupportViewTestCase(ModuleStoreTestCase):
     """
     Base class for support view tests.
     """
@@ -36,6 +36,7 @@ class SupportViewTestCase(TestCase):
         """Create a user and log in. """
         super(SupportViewTestCase, self).setUp()
         self.user = UserFactory(username=self.USERNAME, email=self.EMAIL, password=self.PASSWORD)
+        self.course = CourseFactory.create()
         success = self.client.login(username=self.USERNAME, password=self.PASSWORD)
         self.assertTrue(success, msg="Could not log in")
 
@@ -134,11 +135,18 @@ class SupportViewCertificatesTests(SupportViewTestCase):
         response = self.client.get(reverse("support:certificates"))
         self.assertContains(response, "userQuery: ''")
 
-    def test_certificates_with_query(self):
+    def test_certificates_with_user_query(self):
         # Check that an initial query is passed to the JavaScript client.
-        url = reverse("support:certificates") + "?query=student@example.com"
+        url = reverse("support:certificates") + "?user_query=student@example.com"
         response = self.client.get(url)
         self.assertContains(response, "userQuery: 'student@example.com'")
+
+    def test_certificates_along_with_course_query(self):
+        # Check that an initial query is passed to the JavaScript client.
+        url = reverse("support:certificates") + "?user_query=student@example.com&course_id=" + unicode(self.course.id)
+        response = self.client.get(url)
+        self.assertContains(response, "userQuery: 'student@example.com'")
+        self.assertContains(response, "courseID: '" + unicode(self.course.id) + "'")
 
 
 @ddt.ddt
