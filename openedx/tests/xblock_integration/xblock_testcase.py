@@ -8,6 +8,8 @@ import json
 import mock
 import unittest
 
+from xblock.plugin import Plugin
+
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
@@ -278,11 +280,14 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
                      XBlockEventTestMixin,
                      GradePublishTestMixin,
                      SharedModuleStoreTestCase,
-                     LoginEnrollmentTestCase):
+                     LoginEnrollmentTestCase,
+                     Plugin):
     """
     Class for all XBlock-internal test cases (as opposed to integration tests).
     """
     test_configuration = None  # Children must override this!
+
+    entry_point = 'xblock.test.v0'
 
     @classmethod
     def setUpClass(cls):
