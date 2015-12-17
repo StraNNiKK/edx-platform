@@ -121,7 +121,7 @@ class BookmarksAPITests(BookmarkApiEventTestMixin, BookmarksTestsBase):
         """
         self.assertEqual(len(api.get_bookmarks(user=self.user, course_key=self.course.id)), 2)
 
-        with self.assertNumQueries(8):
+        with self.assertNumQueries(9):
             bookmark_data = api.create_bookmark(user=self.user, usage_key=self.vertical_2.location)
 
         self.assert_bookmark_event_emitted(
@@ -142,7 +142,7 @@ class BookmarksAPITests(BookmarkApiEventTestMixin, BookmarksTestsBase):
         """
         self.assertEqual(len(api.get_bookmarks(user=self.user, course_key=self.course.id)), 2)
 
-        with self.assertNumQueries(8):
+        with self.assertNumQueries(9):
             bookmark_data = api.create_bookmark(user=self.user, usage_key=self.vertical_2.location)
 
         self.assert_bookmark_event_emitted(
@@ -158,7 +158,7 @@ class BookmarksAPITests(BookmarkApiEventTestMixin, BookmarksTestsBase):
 
         mock_tracker.reset_mock()
 
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             bookmark_data_2 = api.create_bookmark(user=self.user, usage_key=self.vertical_2.location)
 
         self.assertEqual(len(api.get_bookmarks(user=self.user, course_key=self.course.id)), 3)
@@ -178,16 +178,16 @@ class BookmarksAPITests(BookmarkApiEventTestMixin, BookmarksTestsBase):
         self.assert_no_events_were_emitted(mock_tracker)
 
     @patch('openedx.core.djangoapps.bookmarks.api.tracker.emit')
-    def test_create_bookmark_more_than_limit_raise_error(self, mock_tracker):
+    def bookmark_more_than_limit_raise_error(self, mock_tracker):
         """
         Verifies that create_bookmark raises error when maximum number of units
         allowed to bookmark per course are already bookmarked.
         """
         max_bookmarks = settings.MAX_BOOKMARKS_PER_COURSE
-        course, blocks, bookmarks = self.create_course_with_bookmarks_count(max_bookmarks)
+        __, blocks, __ = self.create_course_with_bookmarks_count(max_bookmarks)
         with self.assertNumQueries(1):
             with self.assertRaises(BookmarksLimitReachedError):
-                api.create_bookmark(user=self.user, usage_key=blocks[-1].location)
+                api.create_bookmark(user=self.user, usage_key=unicode(blocks[-1].location))
 
         self.assert_no_events_were_emitted(mock_tracker)
 
