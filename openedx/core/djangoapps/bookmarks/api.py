@@ -8,6 +8,9 @@ from .serializers import BookmarkSerializer
 
 
 class BookmarksLimitReachedError(Exception):
+    """
+    if try to create new bookmark when max limit of bookmarks already reached
+    """
     pass
 
 
@@ -83,6 +86,7 @@ def create_bookmark(user, usage_key):
 
     Raises:
         ItemNotFoundError: If no block exists for the usage_key.
+        BookmarksLimitReachedError: if try to create new bookmark when max limit of bookmarks already reached
     """
 
     data = {
@@ -91,7 +95,7 @@ def create_bookmark(user, usage_key):
     }
 
     if not Bookmark.can_create_more(data):
-        raise BookmarksLimitReachedError()
+        raise BookmarksLimitReachedError
 
     bookmark, created = Bookmark.create(data)
     if created:
