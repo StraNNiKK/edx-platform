@@ -32,6 +32,13 @@ log = logging.getLogger(__name__)
 def edxnotes(request, course_id):
     """
     Displays the EdxNotes page.
+
+    Arguments:
+        request: HTTP request object
+        course_id: course id
+
+    Returns:
+        Rendered HTTP response.
     """
     course_key = CourseKey.from_string(course_id)
     course = get_course_with_access(request.user, "load", course_key)
@@ -46,7 +53,7 @@ def edxnotes(request, course_id):
 
     context = {
         "course": course,
-        "search_endpoint": reverse("notes", kwargs={"course_id": course_id}),
+        "notes_endpoint": reverse("notes", kwargs={"course_id": course_id}),
         "notes": notes_info,
         "debug": json.dumps(settings.DEBUG),
         'position': None,
@@ -72,21 +79,21 @@ def edxnotes(request, course_id):
 @login_required
 def notes(request, course_id):
     """
-    Notes view to handle list and search requests.
-
-    All the query parameters are optional. If `page` or `page_size` is missing then
-    their default values will be used. If `text` param is missing then get all the
-    notes for the current user for this course else get only those notes which
-    contain the `text` value.
+    Notes view to handle list and search requests for pagination.
 
     Query parameters:
-        page: page number
-        page_size: number of notes per page
-        text: text string to search
+        page: requested or default page number
+        page_size: requested or default page size
+        text: text string to search. If `text` param is missing then get all the
+              notes for the current user for this course else get only those notes
+              which contain the `text` value.
 
     Arguments:
         request: HTTP request object
         course_id: course id
+
+    Returns:
+        Pagination response as JSON
     """
     course_key = CourseKey.from_string(course_id)
     course = get_course_with_access(request.user, 'load', course_key)
@@ -97,11 +104,9 @@ def notes(request, course_id):
     page = request.GET.get('page') or DEFAULT_PAGE
     page_size = request.GET.get('page_size') or DEFAULT_PAGE_SIZE
 
-    path = 'annotations'
-    query_string = None
+    text = None
     if 'text' in request.GET:
-        query_string = request.GET.get('text')
-        path = 'search'
+        text = request.GET.get('text')
 
     try:
         notes_info = get_notes(
@@ -109,8 +114,7 @@ def notes(request, course_id):
             course,
             page=page,
             page_size=page_size,
-            path=path,
-            query_string=query_string
+            text=text
         )
     except (EdxNotesParseError, EdxNotesServiceUnavailable) as err:
         return JsonResponseBadRequest({"error": err.message}, status=500)

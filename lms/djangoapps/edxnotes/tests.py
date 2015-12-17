@@ -287,7 +287,8 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
         mock_get.return_value.content = json.dumps(
             {
                 'count': 2,
-                "current": 1,
+                "current_page": 1,
+                "start": 0,
                 "next": None,
                 "previous": None,
                 "num_pages": 1,
@@ -311,7 +312,8 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
         self.assertItemsEqual(
             {
                 'count': 2,
-                "current": 1,
+                "current_page": 1,
+                "start": 0,
                 "next": None,
                 "previous": None,
                 "num_pages": 1,
@@ -392,7 +394,8 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
         """
         mock_get.return_value.content = json.dumps({
             "count": 2,
-            "current": 1,
+            "current_page": 1,
+            "start": 0,
             "next": None,
             "previous": None,
             "num_pages": 1,
@@ -415,7 +418,8 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
         self.assertItemsEqual(
             {
                 "count": 2,
-                "current": 1,
+                "current_page": 1,
+                "start": 0,
                 "next": None,
                 "previous": None,
                 "num_pages": 1,
@@ -497,7 +501,8 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
         mock_get.return_value.content = json.dumps({
             "count": 0,
             "results": [],
-            "current": 1,
+            "current_page": 1,
+            "start": 0,
             "next": None,
             "previous": None,
             "num_pages": 0,
@@ -506,7 +511,8 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
             {
                 "count": 0,
                 "results": [],
-                "current": 1,
+                "current_page": 1,
+                "start": 0,
                 "next": None,
                 "previous": None,
                 "num_pages": 0,
@@ -731,14 +737,14 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
     @patch("edxnotes.helpers.anonymous_id_for_user", autospec=True)
     @patch("edxnotes.helpers.get_edxnotes_id_token", autospec=True)
     @patch("edxnotes.helpers.requests.get", autospec=True)
-    def test_send_request_with_query_string(self, mock_get, mock_get_id_token, mock_anonymous_id_for_user):
+    def test_send_request_with_text_param(self, mock_get, mock_get_id_token, mock_anonymous_id_for_user):
         """
         Tests that requests are send with correct information.
         """
         mock_get_id_token.return_value = "test_token"
         mock_anonymous_id_for_user.return_value = "anonymous_id"
         helpers.send_request(
-            self.user, self.course.id, path="test", query_string="text", page=1, page_size=10
+            self.user, self.course.id, path="test", text="text", page=1, page_size=10
         )
         mock_get.assert_called_with(
             "http://example.com/test/",
@@ -762,7 +768,7 @@ class EdxNotesHelpersTest(ModuleStoreTestCase):
     @patch("edxnotes.helpers.anonymous_id_for_user", autospec=True)
     @patch("edxnotes.helpers.get_edxnotes_id_token", autospec=True)
     @patch("edxnotes.helpers.requests.get", autospec=True)
-    def test_send_request_without_query_string(self, mock_get, mock_get_id_token, mock_anonymous_id_for_user):
+    def test_send_request_without_text_param(self, mock_get, mock_get_id_token, mock_anonymous_id_for_user):
         """
         Tests that requests are send with correct information.
         """

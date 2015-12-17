@@ -66,9 +66,20 @@ def get_token_url(course_id):
     })
 
 
-def send_request(user, course_id, page, page_size, path="", query_string=None):
+def send_request(user, course_id, page, page_size, path="", text=None):
     """
-    Sends a request with appropriate parameters and headers.
+    Sends a request to notes api with appropriate parameters and headers.
+
+    Arguments:
+        user: Current logged in user
+        course_id: Course id
+        page: requested or default page number
+        page_size: requested or default page size
+        path: `search` or `annotations`. This is used to calculate notes api endpoint.
+        text: text to search.
+
+    Returns:
+        Response received from notes api
     """
     url = get_internal_endpoint(path)
     params = {
@@ -78,9 +89,9 @@ def send_request(user, course_id, page, page_size, path="", query_string=None):
         "page_size": page_size,
     }
 
-    if query_string:
+    if text:
         params.update({
-            "text": query_string,
+            "text": text,
             "highlight": True,
             "highlight_tag": HIGHLIGHT_TAG,
             "highlight_class": HIGHLIGHT_CLASS,
@@ -246,9 +257,12 @@ def get_index(usage_key, children):
 
 def construct_urls(request, course_id, api_next_url, api_previous_url):
     """
-    Construct next and previous urls.
+    Construct next and previous urls for LMS. `api_next_url` and `api_previous_url`
+    are returned from notes api but we need to transform them according to edxnotes
+    by removing and replacing extra information.
 
     Arguments:
+        request: HTTP request object
         course_id: course id
         api_next_url: notes api next url
         api_previous_url: notes api previous url
@@ -257,9 +271,9 @@ def construct_urls(request, course_id, api_next_url, api_previous_url):
         next_url: lms notes next url
         previous_url: lms notes previous url
     """
-    def encoded_params(url):
+    def encoded_query_params(url):
         """
-        Extract and return encoded params
+        Extract and return encoded query params string.
         """
         keys = ('page', 'page_size', 'text')
         parsed = urlparse.urlparse(url)
@@ -280,42 +294,63 @@ def construct_urls(request, course_id, api_next_url, api_previous_url):
         next_url = '{host}{base_url}?{query_params}'.format(
             host=host,
             base_url=base_url,
-            query_params=encoded_params(next_url)
+            query_params=encoded_query_params(next_url)
         )
 
     if previous_url:
         previous_url = '{host}{base_url}?{query_params}'.format(
             host=host,
             base_url=base_url,
-            query_params=encoded_params(previous_url)
+            query_params=encoded_query_params(previous_url)
         )
 
     return next_url, previous_url
 
 
-def get_notes(request, course, path='annotations', page=1, page_size=10, query_string=None):
+def get_notes(request, course, page=DEFAULT_PAGE, page_size=DEFAULT_PAGE_SIZE, text=None):
     """
     Returns paginated list of notes for the user.
+
+    Arguments:
+        request: HTTP request object
+        course: Course descriptor
+        page: requested or default page number
+        page_size: requested or default page size
+        text: text to search. If None then return all results for the current logged in user.
+
+    Returns:
+        dict containing below keys
+        start: start of the current page
+        current_page: current page number
+        next': url for next page
+        previous: url for previous page
+        count: total number of notes available for the sent query
+        num_pages: number of pages available
+        results: list with notes info. each item in this list will be a dict
     """
-    response = send_request(request.user, course.id, page, page_size, path, query_string)
+    path = 'search' if text else 'annotations'
+    response = send_request(request.user, course.id, page, page_size, path, text)
 
     try:
         collection = json.loads(response.content)
     except ValueError:
-        raise EdxNotesParseError(_("Bad Response."))
+        raise EdxNotesParseError(_("Invalid response received from notes api."))
 
     # Verify response dict structure
-    expected_keys = ['count', 'results', 'num_pages', 'next', 'previous', 'current']
-    keys_length = len(collection.keys())
-    if not keys_length or not all(key in expected_keys for key in collection.keys()):
-        raise EdxNotesParseError(_("Bad Response."))
+    expected_keys = ['count', 'results', 'num_pages', 'start', 'next', 'previous', 'current_page']
+    keys = collection.keys()
+    if not keys or not all(key in expected_keys for key in keys):
+        raise EdxNotesParseError(_("Invalid response received from notes api."))
 
     filtered_results = preprocess_collection(request.user, course, collection['results'])
     collection['results'] = filtered_results
 
-    next_url, previous_url = construct_urls(request, course.id, collection['next'], collection['previous'])
-    collection['next'] = next_url
-    collection['previous'] = previous_url
+    collection['next'], collection['previous'] = construct_urls(
+        request,
+        course.id,
+        collection['next'],
+        collection['previous']
+    )
 
     return json.dumps(collection, cls=NoteJSONEncoder)
 
