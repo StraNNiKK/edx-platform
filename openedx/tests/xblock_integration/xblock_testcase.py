@@ -339,9 +339,8 @@ class XBlockTestCase(XBlockStudentTestCaseMixin,
                 if block["urlname"] == xblock_name:
                     xblock_type = block["blocktype"]
 
-        print "Type (should be 'done'):", xblock_type
         key = unicode(self.course.id.make_usage_key(xblock_type, xblock_name))
-        print key
+
         return reverse('xblock_handler', kwargs={
             'course_id': unicode(self.course.id),
             'usage_id': key,
