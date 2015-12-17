@@ -258,8 +258,8 @@ def get_index(usage_key, children):
 def construct_urls(request, course_id, api_next_url, api_previous_url):
     """
     Construct next and previous urls for LMS. `api_next_url` and `api_previous_url`
-    are returned from notes api but we need to transform them according to edxnotes
-    by removing and replacing extra information.
+    are returned from notes api but we need to transform them according to LMS notes
+    views by removing and replacing extra information.
 
     Arguments:
         request: HTTP request object
@@ -319,14 +319,14 @@ def get_notes(request, course, page=DEFAULT_PAGE, page_size=DEFAULT_PAGE_SIZE, t
         text: text to search. If None then return all results for the current logged in user.
 
     Returns:
-        dict containing below keys
-        start: start of the current page
-        current_page: current page number
-        next': url for next page
-        previous: url for previous page
-        count: total number of notes available for the sent query
-        num_pages: number of pages available
-        results: list with notes info. each item in this list will be a dict
+        Paginated dictionary with these key:
+            start: start of the current page
+            current_page: current page number
+            next: url for next page
+            previous: url for previous page
+            count: total number of notes available for the sent query
+            num_pages: number of pages available
+            results: list with notes info dictionary. each item in this list will be a dict
     """
     path = 'search' if text else 'annotations'
     response = send_request(request.user, course.id, page, page_size, path, text)

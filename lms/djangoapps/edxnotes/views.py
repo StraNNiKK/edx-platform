@@ -93,7 +93,7 @@ def notes(request, course_id):
         course_id: course id
 
     Returns:
-        Pagination response as JSON
+        Paginated response as JSON
     """
     course_key = CourseKey.from_string(course_id)
     course = get_course_with_access(request.user, 'load', course_key)
@@ -103,10 +103,7 @@ def notes(request, course_id):
 
     page = request.GET.get('page') or DEFAULT_PAGE
     page_size = request.GET.get('page_size') or DEFAULT_PAGE_SIZE
-
-    text = None
-    if 'text' in request.GET:
-        text = request.GET.get('text')
+    text = request.GET.get('text')
 
     try:
         notes_info = get_notes(
