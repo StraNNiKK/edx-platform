@@ -19,10 +19,13 @@
                 initialize: function (options) {
                     this.settings = options.settings;
                     this.itemViews = [];
+                    this.is_archived = options.is_archived || false;
                 },
 
                 render: function () {
-                    this.$el.html(this.template({courses: this.collection, settings: this.settings}));
+                    this.$el.html(this.template(
+                        {courses: this.collection, settings: this.settings, is_archived: this.is_archived}
+                    ));
                     this.collection.each(this.createItemView, this);
 
                     return this;

@@ -51,7 +51,8 @@
                 });
                 this.archivedCourseListView = new CourseListView({
                     collection: new CourseCollection(archivedCourses),
-                    settings: settings
+                    settings: settings,
+                    is_archived: true
                 });
 
                 this.mainView = new TabbedView({
