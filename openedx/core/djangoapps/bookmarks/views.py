@@ -224,7 +224,7 @@ class BookmarksListView(ListCreateAPIView, BookmarksViewMixin):
         POST /api/bookmarks/v1/bookmarks/
         Request data: {"usage_id": "<usage-id>"}
         """
-        default_user_message = ugettext_noop(u'No data provided.')
+        default_user_message = ugettext_noop(u'An error has occurred. Please try again.')
 
         if not request.data:
             return self.error_response(ugettext_noop(u'No data provided.'), default_user_message)

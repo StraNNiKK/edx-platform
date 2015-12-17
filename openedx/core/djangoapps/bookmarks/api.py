@@ -4,6 +4,8 @@ Bookmarks Python API.
 from eventtracking import tracker
 from . import DEFAULT_FIELDS, OPTIONAL_FIELDS
 from xmodule.modulestore.django import modulestore
+from django.conf import settings
+from xmodule.modulestore.exceptions import ItemNotFoundError
 from .models import Bookmark
 from .serializers import BookmarkSerializer
 
@@ -74,6 +76,28 @@ def get_bookmarks(user, course_key=None, fields=None, serialized=True):
     return bookmarks_queryset
 
 
+def can_create_more(data):
+    """
+    Determine if a new Bookmark can be created for the course
+    based on limit defined in django.conf.settings.MAX_BOOKMARKS_PER_COURSE
+
+    Arguments:
+        data (dict): The data to create the object with.
+    Returns:
+        Boolean
+    """
+    data = dict(data)
+
+    user = data['user']
+    course_key = data['usage_key'].course_key
+
+    # User can create up to max_bookmarks_per_course bookmarks
+    if Bookmark.objects.filter(user=user, course_key=course_key).count() >= settings.MAX_BOOKMARKS_PER_COURSE:
+        return False
+
+    return True
+
+
 def create_bookmark(user, usage_key):
     """
     Create a bookmark.
@@ -90,12 +114,16 @@ def create_bookmark(user, usage_key):
         BookmarksLimitReachedError: if try to create new bookmark when max limit of bookmarks already reached
     """
 
+    usage_key = usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
     data = {
         'user': user,
-        'usage_key': usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
+        'usage_key': usage_key
     }
 
-    if not Bookmark.can_create_more(data):
+    if usage_key.course_key.run is None:
+        raise ItemNotFoundError
+
+    if not can_create_more(data):
         raise BookmarksLimitReachedError
 
     bookmark, created = Bookmark.create(data)
