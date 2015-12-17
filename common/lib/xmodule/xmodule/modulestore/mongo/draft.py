@@ -569,6 +569,8 @@ class DraftModuleStore(MongoModuleStore):
             )
         self._delete_subtree(location, as_functions)
 
+        SignalHandler
+
     def _delete_subtree(self, location, as_functions, draft_only=False):
         """
         Internal method for deleting all of the subtree whose revisions match the as_functions

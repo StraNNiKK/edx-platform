@@ -818,6 +818,12 @@ INSTALLED_APPS = (
     # other apps that are.  Django 1.8 wants to have imported models supported
     # by installed apps.
     'lms.djangoapps.verify_student',
+
+    # edx-milestones service
+    'milestones',
+
+    # Gating of course content
+    'openedx.core.djangoapps.gating.apps.GatingConfig',
 )
 
 
@@ -923,9 +929,6 @@ OPTIONAL_APPS = (
 
     # edxval
     'edxval',
-
-    # milestones
-    'milestones',
 
     # Organizations App (http://github.com/edx/edx-organizations)
     'organizations',

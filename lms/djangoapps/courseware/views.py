@@ -54,6 +54,7 @@ from openedx.core.djangoapps.credit.api import (
     is_user_eligible_for_credit,
     is_credit_course
 )
+from openedx.core.djangoapps.gating import api as gating_api
 from courseware.models import StudentModuleHistory
 from courseware.model_data import FieldDataCache, ScoresClient
 from .module_render import toc_for_course, get_module_for_descriptor, get_module, get_module_by_usage_id
@@ -394,6 +395,14 @@ def _index_bulk_op(request, course_key, chapter, section, position):
                 and user_must_complete_entrance_exam(request, user, course):
             log.info(u'User %d tried to view course %s without passing entrance exam', user.id, unicode(course.id))
             return redirect(reverse('courseware', args=[unicode(course.id)]))
+
+    # Gated Content Check
+    gated_content = gating_api.get_gated_content(course.id, user)
+    if section and gated_content:
+        for usage_key in gated_content:
+            if section in usage_key:
+                raise Http404
+
     # check to see if there is a required survey that must be taken before
     # the user can access the course.
     if survey.utils.must_answer_survey(course, user):

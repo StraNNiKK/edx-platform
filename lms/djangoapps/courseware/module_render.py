@@ -80,6 +80,7 @@ from lms.djangoapps.verify_student.services import ReverificationService
 
 from edx_proctoring.services import ProctoringService
 from openedx.core.djangoapps.credit.services import CreditService
+from openedx.core.djangoapps.gating import api as gating_api
 
 from .field_overrides import OverrideFieldData
 
@@ -155,8 +156,12 @@ def toc_for_course(user, request, course, active_chapter, active_section, field_
         toc_chapters = list()
         chapters = course_module.get_display_items()
 
-        # See if the course is gated by one or more content milestones
+        # Check for content which needs to be completed
+        # before the rest of the content is made available
         required_content = milestones_helpers.get_required_content(course, user)
+
+        # Check for gated content
+        gated_content = gating_api.get_gated_content(course.id, user)
 
         # The user may not actually have to complete the entrance exam, if one is required
         if not user_must_complete_entrance_exam(request, user, course):
@@ -180,6 +185,10 @@ def toc_for_course(user, request, course, active_chapter, active_section, field_
 
                 active = (chapter.url_name == active_chapter and
                           section.url_name == active_section)
+
+                # Skip the current section if it is gated
+                if gated_content and unicode(section.location) in gated_content:
+                    continue
 
                 if not section.hide_from_toc:
                     section_context = {

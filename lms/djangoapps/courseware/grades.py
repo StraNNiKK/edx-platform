@@ -27,7 +27,9 @@ from .models import StudentModule
 from .module_render import get_module_for_descriptor
 from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
+from opaque_keys.edx.locator import BlockUsageLocator
 from openedx.core.djangoapps.signals.signals import GRADES_UPDATED
+from openedx.core.djangoapps.gating import api as gating_api
 
 
 log = logging.getLogger("edx.courseware")
@@ -589,6 +591,9 @@ def _progress_summary(student, request, course, field_data_cache=None, scores_cl
         # be hidden behind the ScoresClient.
         max_scores_cache.fetch_from_remote(field_data_cache.scorable_locations)
 
+    # Check for gated content
+    gated_content = gating_api.get_gated_content(course.id, student)
+
     chapters = []
     locations_to_children = defaultdict(list)
     locations_to_weighted_scores = {}
@@ -602,7 +607,7 @@ def _progress_summary(student, request, course, field_data_cache=None, scores_cl
         for section_module in chapter_module.get_display_items():
             # Skip if the section is hidden
             with outer_atomic():
-                if section_module.hide_from_toc:
+                if section_module.hide_from_toc or unicode(section_module.location) in gated_content:
                     continue
 
                 graded = section_module.graded
@@ -808,3 +813,68 @@ def _get_mock_request(student):
     request = RequestFactory().get('/')
     request.user = student
     return request
+
+
+def _calculate_score_for_modules(user_id, course, modules):
+    """
+    Calculates the cumulative score (percent) of the provided modules
+    """
+
+    # removing branch and version from exam modules locator
+    # otherwise student module would not return scores since module usage keys would not match
+    modules = [m for m in modules]
+    locations = [
+        BlockUsageLocator(
+            course_key=course.id,
+            block_type=module.location.block_type,
+            block_id=module.location.block_id
+        )
+        if isinstance(module.location, BlockUsageLocator) and module.location.version
+        else module.location
+        for module in modules
+    ]
+
+    scores_client = ScoresClient(course.id, user_id)
+    scores_client.fetch_scores(locations)
+
+    # Iterate over all of the exam modules to get score percentage of user for each of them
+    module_percentages = []
+    ignore_categories = ['course', 'chapter', 'sequential', 'vertical']
+    for index, module in enumerate(modules):
+        if module.category not in ignore_categories and (module.graded or module.has_score):
+            module_score = scores_client.get(locations[index])
+            if module_score:
+                module_percentages.append(module_score.correct / module_score.total)
+
+    return sum(module_percentages) / float(len(module_percentages)) if module_percentages else 0
+
+
+def get_module_score(user, course, module):
+    """
+    Gather the set of modules which comprise the entrance exam
+    Note that 'request' may not actually be a genuine request, due to the
+    circular nature of module_render calling entrance_exams and get_module_for_descriptor
+    being used here.  In some use cases, the caller is actually mocking a request, although
+    in these scenarios the 'user' child object can be trusted and used as expected.
+    It's a much larger refactoring job to break this legacy mess apart, unfortunately.
+    """
+    def inner_get_module(descriptor):
+        """
+        Delegate to get_module_for_descriptor (imported here to avoid circular reference)
+        """
+        field_data_cache = FieldDataCache([descriptor], course.id, user)
+        return get_module_for_descriptor(
+            user,
+            _get_mock_request(user),
+            descriptor,
+            field_data_cache,
+            course.id,
+            course=course
+        )
+
+    modules = yield_dynamic_descriptor_descendants(
+        module,
+        user.id,
+        inner_get_module
+    )
+    return _calculate_score_for_modules(user.id, course, modules)

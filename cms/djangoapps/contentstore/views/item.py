@@ -20,6 +20,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, HttpResponse, Http404
 from django.utils.translation import ugettext as _
 from django.views.decorators.http import require_http_methods
+from django.dispatch import Signal
 
 from xblock.fields import Scope
 from xblock.fragment import Fragment
@@ -27,7 +28,7 @@ from xblock.fragment import Fragment
 import xmodule
 from xmodule.tabs import CourseTabList
 from xmodule.modulestore import ModuleStoreEnum, EdxJSONEncoder
-from xmodule.modulestore.django import modulestore
+from xmodule.modulestore.django import modulestore, SignalHandler
 from xmodule.modulestore.exceptions import ItemNotFoundError, InvalidLocationError
 from xmodule.modulestore.inheritance import own_metadata
 from xmodule.modulestore.draft_and_published import DIRECT_ONLY_CATEGORIES
@@ -39,6 +40,8 @@ from util.date_utils import get_default_time_display
 
 from util.json_request import expect_json, JsonResponse
 from util.milestones_helpers import is_entrance_exams_enabled
+
+from openedx.core.djangoapps.gating import api as gating_api
 
 from student.auth import has_studio_write_access, has_studio_read_access
 from contentstore.utils import (
@@ -163,6 +166,9 @@ def xblock_handler(request, usage_key_string):
                 metadata=request.json.get('metadata'),
                 nullout=request.json.get('nullout'),
                 grader_type=request.json.get('graderType'),
+                is_prereq=request.json.get('isPrereq'),
+                prereq_usage_key=request.json.get('prereqUsageKey'),
+                prereq_min_score=request.json.get('prereqMinScore'),
                 publish=request.json.get('publish'),
             )
     elif request.method in ('PUT', 'POST'):
@@ -379,7 +385,7 @@ def _update_with_callback(xblock, user, old_metadata=None, old_content=None):
 
 
 def _save_xblock(user, xblock, data=None, children_strings=None, metadata=None, nullout=None,
-                 grader_type=None, publish=None):
+                 grader_type=None, is_prereq=None, prereq_usage_key=None, prereq_min_score=None, publish=None):
     """
     Saves xblock w/ its fields. Has special processing for grader_type, publish, and nullout and Nones in metadata.
     nullout means to truly set the field to None whereas nones in metadata mean to unset them (so they revert
@@ -479,8 +485,8 @@ def _save_xblock(user, xblock, data=None, children_strings=None, metadata=None, 
         xblock = _update_with_callback(xblock, user, old_metadata, old_content)
 
         # for static tabs, their containing course also records their display name
+        course = store.get_course(xblock.location.course_key)
         if xblock.location.category == 'static_tab':
-            course = store.get_course(xblock.location.course_key)
             # find the course's reference to this tab and update the name.
             static_tab = CourseTabList.get_tab_by_slug(course.tabs, xblock.location.name)
             # only update if changed
@@ -496,6 +502,19 @@ def _save_xblock(user, xblock, data=None, children_strings=None, metadata=None, 
 
         if grader_type is not None:
             result.update(CourseGradingModel.update_section_grader_type(xblock, grader_type, user))
+
+        # Save gating info
+        if course.enable_subsection_gating:
+            course_key = xblock.runtime.course_id.for_branch(None)
+            if is_prereq is not None:
+                if is_prereq:
+                    gating_api.add_prerequisite(course_key, xblock.location)
+                else:
+                    gating_api.remove_prerequisite(xblock.location)
+                result['is_prereq'] = is_prereq
+
+            if prereq_usage_key is not None:
+                gating_api.set_required_content(course_key, xblock.location, prereq_usage_key, prereq_min_score)
 
         # If publish is set to 'republish' and this item is not in direct only categories and has previously been published,
         # then this item should be republished. This is used by staff locking to ensure that changing the draft
@@ -657,6 +676,7 @@ def _delete_item(usage_key, user):
             store.update_item(course, user.id)
 
         store.delete_item(usage_key, user.id)
+        SignalHandler.item_deleted.send(sender=None, usage_key=usage_key, user_id=user.id)
 
 
 @login_required
@@ -873,9 +893,26 @@ def create_xblock_info(xblock, data=None, metadata=None, include_ancestor_info=F
                 "default_time_limit_minutes": xblock.default_time_limit_minutes
             })
 
-    # Entrance exam subsection should be hidden. in_entrance_exam is inherited metadata, all children will have it.
-    if xblock.category == 'sequential' and getattr(xblock, "in_entrance_exam", False):
-        xblock_info["is_header_visible"] = False
+    if xblock.category == 'sequential':
+        # Gating info
+        if course.enable_subsection_gating:
+            xblock_info["is_prereq"] = gating_api.is_prerequisite(course.id, xblock.location)
+            xblock_info["prereqs"] = [
+                p for p in course.gating_prerequisites if unicode(xblock.location) not in p['namespace']
+            ]
+            prereq, prereq_min_score = gating_api.get_required_content(
+                course.id,
+                xblock.location
+            )
+            xblock_info["prereq"] = prereq
+            xblock_info["prereq_min_score"] = prereq_min_score
+            if prereq:
+                xblock_info["visibility_state"] = VisibilityState.staff_only
+
+        # Entrance exam subsection should be hidden. in_entrance_exam is
+        # inherited metadata, all children will have it.
+        if getattr(xblock, "in_entrance_exam", False):
+            xblock_info["is_header_visible"] = False
 
     if data is not None:
         xblock_info["data"] = data
