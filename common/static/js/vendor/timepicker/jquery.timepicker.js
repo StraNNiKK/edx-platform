@@ -608,8 +608,8 @@ requires jQuery 1.7+
 
 				case 'H':
 					hour = time.getHours();
-					if (seconds === _ONE_DAY)
-						hour = 24;
+					if (seconds >= _ONE_DAY)
+						hour = Math.floor(seconds / (60 * 60));
 					output += (hour > 9) ? hour : '0'+hour;
 					break;
 
