@@ -3,6 +3,7 @@ Bookmarks Python API.
 """
 from eventtracking import tracker
 from . import DEFAULT_FIELDS, OPTIONAL_FIELDS
+from xmodule.modulestore.django import modulestore
 from .models import Bookmark
 from .serializers import BookmarkSerializer
 
@@ -91,7 +92,7 @@ def create_bookmark(user, usage_key):
 
     data = {
         'user': user,
-        'usage_key': usage_key
+        'usage_key': usage_key.replace(course_key=modulestore().fill_in_run(usage_key.course_key))
     }
 
     if not Bookmark.can_create_more(data):

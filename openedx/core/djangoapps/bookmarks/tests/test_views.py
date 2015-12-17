@@ -309,6 +309,34 @@ class BookmarksListViewTests(BookmarksViewsTestsBase):
             u'Block with usage_id: i4x://arbi/100/html/340ef1771a094090ad260ec940d04a21 not found.'
         )
 
+    def test_post_bookmark_when_max_bookmarks_already_exist(self):
+        """
+        Test that posting a bookmark for a block that does not exist returns a 400.
+        """
+        max_bookmarks = settings.MAX_BOOKMARKS_PER_COURSE
+        course, blocks, bookmarks = self.create_course_with_bookmarks_count(max_bookmarks)
+
+        # from nose.tools import set_trace
+        # set_trace()
+
+        with self.assertNumQueries(7):  # No queries for bookmark table.
+            response = self.send_post(
+                client=self.client,
+                url=reverse('bookmarks'),
+                data={'usage_id': unicode(blocks[-1].location)},
+                expected_status=400
+            )
+        self.assertEqual(
+            response.data['user_message'],
+            u'You can create up to {0} bookmarks. You must remove some bookmarks before you can add new ones.'
+                .format(max_bookmarks)
+        )
+        self.assertEqual(
+            response.data['developer_message'],
+            u'You can create up to {0} bookmarks. You must remove some bookmarks before you can add new ones.'
+                .format(max_bookmarks)
+        )
+
     def test_unsupported_methods(self):
         """
         Test that DELETE and PUT are not supported.

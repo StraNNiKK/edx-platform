@@ -14,6 +14,7 @@ from xmodule.modulestore.exceptions import ItemNotFoundError
 
 from .. import api
 from ..models import Bookmark
+from openedx.core.djangoapps.bookmarks.api import BookmarksLimitReachedError
 from .test_models import BookmarksTestsBase
 
 
@@ -173,6 +174,20 @@ class BookmarksAPITests(BookmarkApiEventTestMixin, BookmarksTestsBase):
         with self.assertNumQueries(0):
             with self.assertRaises(ItemNotFoundError):
                 api.create_bookmark(user=self.user, usage_key=UsageKey.from_string('i4x://brb/100/html/340ef1771a0940'))
+
+        self.assert_no_events_were_emitted(mock_tracker)
+
+    @patch('openedx.core.djangoapps.bookmarks.api.tracker.emit')
+    def test_create_bookmark_more_than_limit_raise_error(self, mock_tracker):
+        """
+        Verifies that create_bookmark raises error when maximum number of units
+        allowed to bookmark per course are already bookmarked.
+        """
+        max_bookmarks = settings.MAX_BOOKMARKS_PER_COURSE
+        course, blocks, bookmarks = self.create_course_with_bookmarks_count(max_bookmarks)
+        with self.assertNumQueries(1):
+            with self.assertRaises(BookmarksLimitReachedError):
+                api.create_bookmark(user=self.user, usage_key=blocks[-1].location)
 
         self.assert_no_events_were_emitted(mock_tracker)
 
