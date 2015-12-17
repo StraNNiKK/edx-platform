@@ -71,14 +71,13 @@ class Bookmark(TimeStampedModel):
         Returns:
             Boolean
         """
-        max_bookmarks_per_course = settings.MAX_BOOKMARKS_PER_COURSE
         data = dict(data)
 
         user = data['user']
         course_key = data['usage_key'].course_key
 
         # User can create up to max_bookmarks_per_course bookmarks
-        if cls.objects.filter(user=user, course_key=course_key).count() == max_bookmarks_per_course:
+        if cls.objects.filter(user=user, course_key=course_key).count() >= settings.MAX_BOOKMARKS_PER_COURSE:
             return False
 
         return True
